@@ -5,11 +5,12 @@ library(Biostrings)
 library(stringr)
 library(parallel)
 library(qpcR)
+library(gridExtra)
 library(ggplot2)
 library(XML)
 library(plyr)
 
-motif_ref <- data.frame(sym=c("W","S","M","K","R","Y","B","D","H","V","N"), bases=c("(A|T)","(C|G)","(A|C)","(G|T)","(A|G)","(C|T)","(C|G|T)","(A|G|T)","(A|C|T)","(A|C|G)","(A|C|G|T)"))
+motif_ref <- data.frame(sym=c("A","C","G","T","W","S","M","K","R","Y","B","D","H","V","N"), bases=c("A","C","G","T","(A|T)","(C|G)","(A|C)","(G|T)","(A|G)","(C|T)","(C|G|T)","(A|G|T)","(A|C|T)","(A|C|G)","(A|C|G|T)"))
 
 read.genome.data <- function(job_path,base_path_data){
 	xml_data <- xmlParse(paste0(job_path,"/input.xml"))
@@ -97,6 +98,7 @@ stifle <- clusterEvalQ(cl, {
 # for each motif
 list_graph <- list()
 for (j in 1:length(motif_f)) {
+# for (j in 1:1) {
 	dir <- paste0(gsub("\\\\", "/", destination), "/", motif_f[j]) #, "/", dirname(fasta_file),
 	unlink(dir, recursive = T)
 	ifelse(!dir.exists(dir), dir.create(dir), FALSE)
@@ -115,7 +117,7 @@ for (j in 1:length(motif_f)) {
 	#Get new_list_o
 	new_list_o <- list()
 	new_list_o2 <- list()
-	new_mot_ref <- rbind(motif_ref, data.frame(sym = c("A", "C", "G", "T"), bases = c("A", "C", "G", "T")))
+	# new_mot_ref <- rbind(motif_ref, data.frame(sym = c("A", "C", "G", "T"), bases = c("A", "C", "G", "T")))
 	#cat(paste0("   + Methy Checking child motifs from pos. 1-", nchar(motif_f[j])), "\n")
 	for (q in 1:nchar(motif_f[j])) {
 		cat <- 1:nchar(motif_f[j])
@@ -211,8 +213,9 @@ for (j in 1:length(motif_f)) {
 			deglist[[((newy-1)*4+newy2)]] <- data.frame(
 				base = locpos,
 				pos = newy,
+				mod = 0, #Added
 				values = c(dataworky10$score, dataworky10$ipdRatio, dataworky10$coverage),
-				type = c(rep("score", nrow(dataworky10)), rep("ipdRatio", nrow(dataworky10)), rep("coverage", nrow(dataworky10))),
+				type = c(rep("Score", nrow(dataworky10)), rep("IPDratio", nrow(dataworky10)), rep("Coverage", nrow(dataworky10))), #Modify name
 				count = c(rep("", nrow(dataworky10)), rep("", nrow(dataworky10)), rep(nrow(dataworky10), nrow(dataworky10))),
 				county = c(rep(max(dataworky10$score), nrow(dataworky10)), rep(max(dataworky10$ipdRatio), nrow(dataworky10)), rep(max(dataworky10$ipdRatio), nrow(dataworky10)))
 			)
@@ -220,7 +223,7 @@ for (j in 1:length(motif_f)) {
 	}
 
 	dataw <- do.call(rbind, deglist)
-	valueme2 <- data.frame(valueme2 = 0.1 + max(as.numeric(as.vector(sapply(dataw[dataw$type=="ipdRatio",]$values, function (x) rep(x,3))))))
+	valueme2 <- data.frame(valueme2 = 0.1 + max(as.numeric(as.vector(sapply(dataw[dataw$type=="IPDratio",]$values, function (x) rep(x,3)))))) #Modify name
 	dataworky <- cbind(dataw, valueme2)
 	dataworky2 <- data.frame()
 	dataworky2 <- dataworky[dataworky$base=="A",]
@@ -229,24 +232,76 @@ for (j in 1:length(motif_f)) {
 	write(paste0(dir,"/dataw.csv"), file = "graph_dirs.txt",append = TRUE)
 	write(motif_f[j], file = "graph_dirs.txt",append = TRUE)
 
-	prettify <- theme(
-		panel.background = element_rect(fill = NA,color="gray"), 
-		panel.grid.major.y = element_blank(),
-		panel.grid.major.x = element_line(size=.1, color="black",linetype="dotted"), 
-		panel.grid.minor.y = element_blank(),
-		panel.grid.minor.x = element_line(size=.1, color="black"),
-		legend.position="bottom"
+	prettify_base <- theme(
+		panel.background=element_rect(fill = NA,color="gray"), 
+		panel.grid.major.y=element_blank(),
+		panel.grid.major.x=element_line(size=.1, color="black",linetype="dotted"), 
+		panel.grid.minor.y=element_blank(),
+		panel.grid.minor.x=element_line(size=.1, color="black"),
+		legend.position="none"
 	)
 
-	graph <- ggplot(dataw, aes (x=base, y=values, color=type, group=base)) +
-		geom_violin() +
-		facet_grid(type ~ pos, scales='free') +
-		theme_gray() %+replace% prettify +
-		geom_text(aes(y=county, label=count), size=5, colour="grey25") + 
-		ggtitle(motif_f[j])
-	ggsave(filename=paste0(dir, "/", motif_f[j], ".png"), graph, width=length(unique(dataw$pos))*2.8, height=8, limitsize=F)
-	ggsave(filename=paste0(dir, "/", motif_f[j], ".pdf"), graph, width=length(unique(dataw$pos))*2.8, height=8, limitsize=F)
+	prettify_top <- prettify_base +
+		theme(
+			axis.title.x=element_blank(),
+			axis.text.x=element_blank(),
+			axis.ticks.x=element_blank()
+		)
+
+	prettify_mid <- prettify_top +
+		theme(
+			strip.background=element_blank(),
+			strip.text.x=element_blank()
+		)
+
+	prettify_btm <- prettify_base +
+		theme(
+			strip.background=element_blank(),
+			strip.text.x=element_blank()
+		)
+
+	# Mark expected nucleotide 
+	list_pattern <- as.character(motif_ref$bases[match(unlist(strsplit(motif_f[j],"")),motif_ref$sym)])
+	for(idx_motif in 1:length(list_pattern)){
+		opt_nuc <- unlist(strsplit(gsub(" ","",chartr("(|)", "   ", list_pattern[idx_motif])),""))
+		dataw$mod[dataw$pos==idx_motif & dataw$base %in% opt_nuc] <- 1
+	}
+
+	gp_cov <- ggplot(subset(dataw, type=="Coverage")) + 
+		geom_violin(aes(x=base, y=values, color="red", group=base)) +
+		geom_text(data=unique(subset(dataw,select=-values)), aes(x=base, y=10, label=count), size=5, colour="grey25") + #Remove duplicate entry
+		facet_grid(. ~ pos) +
+		scale_colour_manual(values=c("red"="#F8766D")) +
+		labs(y="Coverage") +
+		prettify_top
+
+	gp_ipd <- ggplot(subset(dataw, type=="IPDratio")) + 
+		geom_violin(aes(x=base, y=values, color="green", group=base, fill=as.factor(mod))) +
+		coord_cartesian(ylim=c(0,10)) +
+		facet_grid(. ~ pos) +
+		scale_colour_manual(values=c("green"="#00BA38")) +
+		scale_fill_manual(values=c("0"="white", "1"="#00BA38")) +
+		labs(y="IPD ratio") +
+		prettify_mid
+	
+	gp_scr <- ggplot(subset(dataw, type=="Score")) + 
+		geom_violin(aes(x=base, y=values, color="blue", group=base, fill=as.factor(mod))) +
+		facet_grid(. ~ pos) +
+		scale_colour_manual(values=c("blue"="#619CCF")) +
+		scale_fill_manual(values=c("0"="white", "1"="#619CCF")) +
+		labs(x=paste0("Alternate base in ",motif_f[j]," motif")) +
+		labs(y="Score") +
+		prettify_btm
+
+	gp_cov <- ggplotGrob(gp_cov)
+	gp_ipd <- ggplotGrob(gp_ipd) # Margin too large, see rbind below
+	gp_scr <- ggplotGrob(gp_scr)
+
+	gp <- arrangeGrob(rbind(gp_cov, gp_ipd, gp_scr), ncol=1, top=motif_f[j])
+
+	ggsave(filename=paste0(dir, "/", motif_f[j], ".pdf"), gp, width=length(unique(dataw$pos))*2.8, height=8, limitsize=F)
 }
+dev.off() # remove arrangeGrob device
 
 stopCluster(cl)
 
