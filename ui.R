@@ -5,30 +5,38 @@ shinyUI(fluidPage(verticalLayout(
   titlePanel("SMRTMotif Plot"),
   wellPanel(fluidRow(
     column(
-      3,
-      fileInput('modfile', 'Choose CSV.GZ File', accept = c('.gz')),
-      fileInput('genfile', 'Choose FASTA File', accept = c('.fasta'))
+      4,
+      fileInput('modfile', 'modifications.csv.gz', accept = c('.gz')),
+      fileInput('genfile', 'genome.fasta', accept = c('.fasta')),
+      fileInput('motfile', 'motif_summary.csv', accept = c('.csv'))
     ),
     column(
-      5,
-      offset = 1,
+      4,
+      offset = 0,
+      uiOutput('motifs'),
+      h5("or", align = "center"),
+      h5("specify a specific motif"),
       div(
-        style = "display: inline-block;vertical-align:top; width: 150px;",
+        style = "display: inline-block;vertical-align:top; width: 180px;",
         textInput(
           inputId = "motif",
-          label = "Motif",
-          value = "CAAAAA"
+          label = NULL,
+          value = "Motif (e.g. CAAAAA)"
         )
       ),
-      div(style = "display: inline-block;vertical-align:top; width: 150px;",
+      div(style = "display: inline-block;vertical-align:top; width: 180px;",
           textInput(
             inputId = "center",
-            label = "Center",
-            value = 5
-          ))
+            label = NULL,
+            value = "Center (e.g. 5)"
+          )),
+      hr(),
+      radioButtons("radio", label = "Choose Motif Input Type:",
+                   choices = list("Motif from File" = 1, 
+                                  "Motif from Text Box" = 2), selected = 1)
     ),
     column(
-      2,
+      4, 
       actionButton("submit", "Submit", style = "color: white; background-color: #337AB7"),
       actionButton("reset", "Clear")
     )

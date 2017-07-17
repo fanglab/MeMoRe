@@ -15,10 +15,19 @@ uploaddat <- function(rmodfile, rgenfile, motif, center) {
   csv_temp <- gunzip(rmodfile, remove = T, temporary = T, overwrite = T)
   csv <<- fread(csv_temp, sep = ",", header = T, verbose = F, drop = c(6, 7, 8, 11, 12, 13))  # Set csv parameters
   gene <<- readDNAStringSet(rgenfile)
+  print(motif)
+  print(center)
+  print(strsplit(motif,""))
+  print(strsplit(motif,"")[[1]])
+  print(as.integer(center)+1)
+  print(strsplit(motif,"")[[1]][as.integer(center)+1])
   motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
 }
 
 processdat <- function(motif, center) {
+  print(motif)
+  print(center)
+  print(1)
   motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
   motif_ref <- data.frame(sym = c("W", "S", "M", "K", "R", "Y", "B", "D", "H", "V", "N"), bases = c("(A|T)", "(C|G)", "(A|C)", "(G|T)", "(A|G)", "(C|T)", "(C|G|T)", "(A|G|T)", "(A|C|T)", "(A|C|G)", "(A|C|G|T)"))
   cl_max <- 8
@@ -27,6 +36,7 @@ processdat <- function(motif, center) {
   motif_f <- as.vector(motiftable$motifString)
   cov_cut_spec <- 10
   size_spec <- 100
+  print(2)
   
   gag <- which(width(gene) == max(width(gene)))
   csv2 <- csv[csv$refName == names(gene)[gag]] #csv2 = csv
@@ -246,22 +256,63 @@ oldmodFile <<- NULL
 oldgenFile <<- NULL
 
 function(input, output, session) {
-  v <- reactiveValues(modFile=NULL, genFile=NULL, motiF=NULL, centeR=NULL)
-
+  v <- reactiveValues(modFile=NULL, 
+                      genFile=NULL, 
+                      motFile=NULL,
+                      motiF=NULL, 
+                      centeR=NULL)
   
+  outMotifs <- reactive({
+    inFile = input$motfile
+    if (!is.null(inFile)){
+      print(inFile$datapath)
+      read.table(inFile$datapath, sep = ",", header = TRUE)[1:4]
+    } else {
+      return(list("Choose motif_summary.csv"))
+    }
+  })
+  
+  #for x values
+  output$motifs <- renderUI({
+    selectInput("motifdropdown", "Choose a motif from motif_summary.csv", outMotifs()$motifString)
+  })
+
   observeEvent(input$submit, {
     v$modFile <- input$modfile$datapath
     v$genFile <- input$genfile$datapath
-    v$motiF <- input$motif
-    v$centeR <- input$center
+    v$motFile <- input$motfile$datapath
+    print(input$radio == 1)
+    if(input$radio == 1){
+      motifTable <- read.table(v$motFile, sep = ",", header = TRUE)[1:4]
+      mot_of_int <- motifTable[motifTable$motifString==input$motifdropdown,]
+      v$motiF <- toString(mot_of_int$motifString)
+      v$centeR <- as.integer(mot_of_int$centerPos) 
+    }else{
+      num = as.numeric(input$center)
+      if(grepl('^[A-Za-z]+$', input$motif)){
+        v$motiF <- input$motif
+      }else{
+        showNotification("Enter valid motif.", type="error")
+        return(NULL)
+      }
+      if(!is.na(num) & num > 0 & num <= nchar(input$motif)){
+        v$centeR <- input$center
+      }else{
+        showNotification("Enter valid center position.", type="error")
+        return(NULL)
+      }
+    }
     print(v$modFile)
     print(v$genFile)
-    # print(v$motiF)
-    # print(v$centeR)
+    print(v$motiF)
+    print(v$centeR)
     # print(oldmodFile)
     # print(oldgenFile)
-    print((is.null(oldmodFile) & is.null(oldgenFile)) || !(oldmodFile == v$modFile & oldgenFile == v$genFile))
-    if((is.null(oldmodFile) & is.null(oldgenFile)) || !(oldmodFile == v$modFile & oldgenFile == v$genFile)) {
+    testifemptyorchanged = (
+      is.null(oldmodFile) & is.null(oldgenFile)) || 
+      !(oldmodFile == v$modFile & oldgenFile == v$genFile)
+    print(testifemptyorchanged)
+    if(testifemptyorchanged) {
       print("preupload")
       uploaddat(v$modFile, v$genFile, v$motiF, v$centeR)
       print(csv)
