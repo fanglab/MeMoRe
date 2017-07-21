@@ -261,7 +261,10 @@ for (j in 1:length(motif_f)) {
 		)
 
 	# Mark expected nucleotide 
-	list_pattern <- as.character(motif_ref$bases[match(unlist(strsplit(motif_f[j],"")),motif_ref$sym)])
+	motif_split <- unlist(strsplit(motif_f[j],""))
+    	indx <- match(motif_split, motif_ref$sym, nomatch=0) # Added no match --> as is
+    	list_pattern <- as.character(motif_ref$bases[match(motif_split,motif_ref$sym)])
+    	list_pattern[indx == 0] <- motif_split[indx == 0]
 	for(idx_motif in 1:length(list_pattern)){
 		opt_nuc <- unlist(strsplit(gsub(" ","",chartr("(|)", "   ", list_pattern[idx_motif])),""))
 		dataw$mod[dataw$pos==idx_motif & dataw$base %in% opt_nuc] <- 1
