@@ -6,7 +6,6 @@ library(stringr)
 library(parallel)
 library(ggplot2)
 library(gridExtra)
-library(plotly)
 library(stringi)
 
 options(shiny.maxRequestSize=200*1024^2) 
@@ -24,7 +23,7 @@ uploaddat <- function(rmodfile, rgenfile, motif, center) {
   motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
 }
 
-processdat <- function(motif, center) {
+processdat <- function(motif, center, modificationtype) {
   print(motif)
   print(center)
   print(1)
@@ -144,30 +143,6 @@ processdat <- function(motif, center) {
       dat2[[z.count]] <- data.table(rbind(merged_f2, merged_r2))
       print(z.count)
     }
-
-    # dat2 <- clusterApply(cl, dog1$motif, function(z) {
-    #   # VARS
-    #   csv_sp_f <- exportme2[[1]]
-    #   csv_sp_r <- exportme2[[2]]
-    #   genome_f <- exportme2[[3]]
-    #   transl_f <- exportme[[1]]
-    #   size_spec <- exportme[[2]]
-    #   param_sp <- exportme[[3]]
-    #   transl_r <- transl_f
-    #   genome_r <- chartr("GATC", "CTAG", genome_f)  # chart
-    #   myreverse <- function(x,...){unlist(lapply(strsplit(as.vector(x),""),function(z)paste(rev(z),collapse="")))}
-    #   ar <- paste(rev(stri_extract_all(z, regex = "\\([^)]+\\)|.")[[1]]), collapse = "")
-    #   arya <- unlist(stri_extract_all_regex(genome_f, z))[1]
-    #   locations_f2 <- data.frame(tpl = as.data.table(stri_locate_all_regex(genome_f, z))$start + transl_f,
-    #                             motif = rep(arya, stri_count_fixed(genome_f, z)))
-    #   locations_r2 <- data.table(tpl = as.data.table(stri_locate_all_regex(genome_r, ar))$end - transl_r,
-    #                             motif = rep(arya, stri_count_fixed(genome_r, ar)))
-    #   loc_f_s2 <- locations_f2[!(locations_f2$tpl < param_sp[1] | locations_f2$tpl > param_sp[2]), ]
-    #   loc_r_s2 <- locations_r2[!(locations_r2$tpl < param_sp[1] | locations_r2$tpl > param_sp[2]), ]
-    #   merged_f2 <- merge(loc_f_s2, csv_sp_f, all = F)
-    #   merged_r2 <- merge(loc_r_s2, csv_sp_r, all = F)
-    #   dat2[[z.count]] <- data.table(rbind(merged_f2, merged_r2))
-    # })
     
     ##################################### BOTTOM IN R/RSHINY, TOP IN C ################################33
     
@@ -176,7 +151,7 @@ processdat <- function(motif, center) {
     scorelist <- list()
     ipdlist <- list()
     coveragelist <- list()
-    counts <- vector()
+    countlist <- list()
     
     for(newy in 1:nchar(motif_f[j])){
       for(newy2 in 1:4){
@@ -184,70 +159,147 @@ processdat <- function(motif, center) {
         dataworky10 <- namepos #read.csv(namepos, sep = ",", header = T)
         scorelist[[((newy-1)*4+newy2)]] <- data.table(base = bases[newy2], 
                                                       pos = newy,
+                                                      mod = 0, #Added
                                                       values = c(dataworky10$score),
                                                       type = c(rep("score", nrow(dataworky10))))
         ipdlist[[((newy-1)*4+newy2)]] <- data.table(base = bases[newy2], 
                                                     pos = newy,
+                                                    mod = 0, #Added
                                                     values = c(dataworky10$ipdRatio),
                                                     type = c(rep("ipdRatio", nrow(dataworky10))))
         coveragelist[[((newy-1)*4+newy2)]] <- data.table(base = bases[newy2], 
                                                          pos = newy,
+                                                         mod = 0, #Added
                                                          values = c(dataworky10$coverage),
                                                          type = c(rep("coverage", nrow(dataworky10))))
-        counts[((newy-1)*4+newy2)] <- nrow(dataworky10)
+        countlist[[((newy-1)*4+newy2)]] <- data.table(base = bases[newy2], 
+                                                      pos = newy,
+                                                      labels = nrow(dataworky10))
       }
     }
     
     datascore <- do.call(rbind, scorelist)
     dataipd <- do.call(rbind, ipdlist)
     datacoverage <- do.call(rbind, coveragelist)
+    datacount <- do.call(rbind, countlist)
     
-    #write.csv(datascore, paste0(dir,"/datascore.csv"), row.names = F)
-    #write.csv(dataipd, paste0(dir,"/dataipd.csv"), row.names = F)
-    #write.csv(datacoverage, paste0(dir,"/datacoverage.csv"), row.names = F)
-    #write(paste0(dir,"/dataw.csv"), file = "graph_dirs.txt",append = TRUE)
-    #write(motif_f[j], file = "graph_dirs.txt",append = TRUE)
+    prettify_base <- theme(
+      panel.background=element_rect(fill = NA,color="gray"), 
+      panel.grid.major.y=element_blank(),
+      panel.grid.major.x=element_line(size=.1, color="black",linetype="dotted"), 
+      panel.grid.minor.y=element_blank(),
+      panel.grid.minor.x=element_line(size=.1, color="black"),
+      legend.position="none"
+    )
     
-    prettify <- theme(panel.background = element_rect(fill = NA,color="gray"), 
-                      panel.grid.major.y = element_blank(),
-                      panel.grid.major.x = element_line(size=.1, color="black",linetype="dotted"), 
-                      panel.grid.minor.y = element_blank(),
-                      panel.grid.minor.x = element_line(size=.1, color="black"),
-                      legend.position="none")
+    prettify_top <- prettify_base +
+      theme(
+        axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()
+      )
     
-    datascore <- datascore
+    prettify_mid <- prettify_top +
+      theme(
+        strip.background=element_blank(),
+        strip.text.x=element_blank()
+      )
+    
+    prettify_btm <- prettify_base +
+      theme(
+        strip.background=element_blank(),
+        strip.text.x=element_blank()
+      )
+    
+    datascore <<- datascore
     dataipd <- dataipd
     datacoverage <- datacoverage
+    graphtitle <- paste0(substr(motif_f[j], 1, center), modificationtype, substr(motif_f[j], center+2, nchar(motif_f[j]))) 
+    print(graphtitle)
+    print(datascore)
+    print(dataipd)
+    print(datacoverage)
     
-    graphscore <- ggplot(datascore, aes(x=base, y=values,color = base)) + 
-      ggtitle(paste0(motif_f[j])) +
+    # Mark expected nucleotide 
+    motif_split <- unlist(strsplit(motif_f[j],""))
+    indx <- match(motif_split, motif_ref$sym, nomatch=0) # Added no match --> as is
+    list_pattern <- as.character(motif_ref$bases[match(motif_split,motif_ref$sym)])
+    list_pattern[indx == 0] <- motif_split[indx == 0]
+    for(idx_motif in 1:length(list_pattern)){
+      opt_nuc <- unlist(strsplit(gsub(" ","",chartr("(|)", "   ", list_pattern[idx_motif])),""))
+      #separated for faster data processing
+      datascore$mod[datascore$pos==idx_motif & datascore$base %in% opt_nuc] <- 1
+      dataipd$mod[dataipd$pos==idx_motif & dataipd$base %in% opt_nuc] <- 1
+      datacoverage$mod[datacoverage$pos==idx_motif & datacoverage$base %in% opt_nuc] <- 1
+    }
+    
+    # Combined Graphs Below
+    
+    gp_cov <- ggplot(datacoverage) + 
+      geom_violin(aes(x=base, y=values, color="red", group=base)) +
+      geom_text(data=datacount, aes(x=base, y=10, label=labels), size=5, colour="grey25") + 
+      facet_grid(. ~ pos) +
+      scale_colour_manual(values=c("red"="#F8766D")) +
+      labs(y="Coverage") +
+      prettify_top
+    
+    gp_ipd <- ggplot(dataipd) + 
+      geom_violin(aes(x=base, y=values, color="green", group=base, fill=as.factor(mod))) +
+      coord_cartesian(ylim=c(0,10)) +
+      facet_grid(. ~ pos) +
+      scale_colour_manual(values=c("green"="#00BA38")) +
+      scale_fill_manual(values=c("0"="white", "1"="#00BA38")) +
+      labs(y="IPD ratio") +
+      prettify_mid
+    
+    gp_scr <<- ggplot(datascore) + 
+      geom_violin(aes(x=base, y=values, color="blue", group=base, fill=as.factor(mod))) +
+      facet_grid(. ~ pos) +
+      scale_colour_manual(values=c("blue"="#619CCF")) +
+      scale_fill_manual(values=c("0"="white", "1"="#619CCF")) +
+      labs(x=paste0("Alternate base in ",motif_f[j]," motif")) +
+      labs(y="Score") +
+      prettify_btm
+    
+    gp_cov <- ggplotGrob(gp_cov)
+    gp_ipd <- ggplotGrob(gp_ipd) # Margin too large, see rbind below
+    gp_scr <- ggplotGrob(gp_scr)
+    
+    graphcombined <- arrangeGrob(rbind(gp_cov, gp_ipd, gp_scr), ncol=1, top=graphtitle)
+    
+    # Separate Graphs Below
+    print("Separate Graphs Below")
+    
+    graphscore <- ggplot(datascore) + 
+      geom_violin(aes(x=base, y=values,color = "blue", group=base, fill=as.factor(mod))) + 
+      facet_grid(.~pos) + 
+      ggtitle(graphtitle) +
       labs(x=paste0("Alternate base in ",motif_f[j]," motif")) +
       labs(y="score") +
-      geom_violin() + 
+      scale_colour_manual(values=c("blue"="#619CCF")) +
+      scale_fill_manual(values=c("0"="white", "1"="#619CCF")) +
+      prettify_base
+    
+    graphipd <- ggplot(dataipd) + 
+      geom_violin(aes(x=base, y=values,color = "green", group=base, fill=as.factor(mod))) + 
       facet_grid(.~pos) + 
-      theme_gray() %+replace% prettify
-    graphipd <- ggplot(dataipd, aes(x=base, y=values,color = base)) + 
-      ggtitle(paste0(motif_f[j])) +
+      ggtitle(graphtitle) +
       labs(x=paste0("Alternate base in ",motif_f[j]," motif")) +
       labs(y="ipdRatio") +
-      geom_violin() + 
+      scale_colour_manual(values=c("green"="#00BA38")) +
+      scale_fill_manual(values=c("0"="white", "1"="#00BA38")) +
+      prettify_base
+    
+    graphcoverage <- ggplot(datacoverage) + 
+      geom_violin(aes(x=base, y=values,color = "red", group=base)) + 
       facet_grid(.~pos) + 
-      theme_gray() %+replace% prettify
-    graphcoverage <- ggplot(datacoverage, aes(x=base, y=values,color = base)) + 
-      ggtitle(paste0(motif_f[j])) +
+      ggtitle(graphtitle) +
       labs(x=paste0("Alternate base in ",motif_f[j]," motif")) +
       labs(y="coverage") +
-      geom_violin() + 
-      facet_grid(.~pos) + 
-      theme_gray() %+replace% prettify 
-    
-    gp_cov <- ggplotGrob(graphscore)
-    gp_ipd <- ggplotGrob(graphipd) # Margin too large, see rbind below
-    gp_scr <- ggplotGrob(graphcoverage)
-    
-    gp <- arrangeGrob(rbind(gp_cov, gp_ipd, gp_scr), ncol=1, top=motif_f[j])
-
-    return(list(gs = graphscore, gi = graphipd, gc = graphcoverage))
+      scale_colour_manual(values=c("red"="#F8766D")) +
+      prettify_base
+  
+    return(list(ga = graphcombined, gs = graphscore, gi = graphipd, gc = graphcoverage))
     
   }
 }
@@ -260,13 +312,14 @@ function(input, output, session) {
                       genFile=NULL, 
                       motFile=NULL,
                       motiF=NULL, 
-                      centeR=NULL)
+                      centeR=NULL,
+                      modType=NULL)
   
   outMotifs <- reactive({
     inFile = input$motfile
     if (!is.null(inFile)){
       print(inFile$datapath)
-      read.table(inFile$datapath, sep = ",", header = TRUE)[1:4]
+      read.table(inFile$datapath, sep = ",", header = TRUE)[1:9]
     } else {
       return(list("Choose motif_summary.csv"))
     }
@@ -278,15 +331,17 @@ function(input, output, session) {
   })
 
   observeEvent(input$submit, {
+    # DATA INPUT
     v$modFile <- input$modfile$datapath
     v$genFile <- input$genfile$datapath
     v$motFile <- input$motfile$datapath
     print(input$radio == 1)
     if(input$radio == 1){
-      motifTable <- read.table(v$motFile, sep = ",", header = TRUE)[1:4]
+      motifTable <- read.table(v$motFile, sep = ",", header = TRUE)[c(1,2,3,4,5,6,8,9,10,11)]
       mot_of_int <- motifTable[motifTable$motifString==input$motifdropdown,]
       v$motiF <- toString(mot_of_int$motifString)
-      v$centeR <- as.integer(mot_of_int$centerPos) 
+      v$centeR <- as.integer(mot_of_int$centerPos)
+      v$modType <- toString(mot_of_int$modificationType)
     }else{
       num = as.numeric(input$center)
       if(grepl('^[A-Za-z]+$', input$motif)){
@@ -306,6 +361,7 @@ function(input, output, session) {
     print(v$genFile)
     print(v$motiF)
     print(v$centeR)
+    print(v$modType)
     # print(oldmodFile)
     # print(oldgenFile)
     testifemptyorchanged = (
@@ -319,33 +375,85 @@ function(input, output, session) {
       print(gene)
       print(motiftable)
     }
-    graphs <- processdat(v$motiF, v$centeR)
+    
+    # GRAPHS
+    graphs <- processdat(v$motiF, v$centeR, v$modType)
+    gpa <<- graphs$ga
     gps <<- graphs$gs
     gpi <<- graphs$gi
     gpc <<- graphs$gc
     
     oldmodFile <<- v$modFile
     oldgenFile <<- v$genFile
-  })
+    
+    output$combined <- renderImage({
+      if (is.null(v$modFile) && is.null(v$genFile)) return()
+      
+      outfile <- tempfile(fileext='.png')
+      ggsave(outfile, gpa, width=nchar(v$motiF)*2.8, height=9, limitsize = F)
+      
+      list(src = outfile,
+           contentType = 'image/png')
+    }, deleteFile = TRUE)
+    
+    output$score <- renderImage({
+      if (is.null(v$modFile) && is.null(v$genFile)) return()
+      outfile <- tempfile(fileext='.png')
+        ggsave(outfile, gps, width=nchar(v$motiF)*2.8, height=3, limitsize = F)
+      
+      list(src = outfile,
+           contentType = 'image/png')
+    }, deleteFile = TRUE)
+    print("WHAT")
+    
+    output$ipd <- renderImage({
+      if (is.null(v$modFile) && is.null(v$genFile)) return()
+      
+      outfile <- tempfile(fileext='.png')
+        ggsave(outfile, gpi, width=nchar(v$motiF)*2.8, height=3, limitsize = F)
+      
+      list(src = outfile,
+           contentType = 'image/png')
+    }, deleteFile = TRUE)
+    
+    output$coverage <- renderImage({
+      if (is.null(v$modFile) && is.null(v$genFile)) return()
+      
+      outfile <- tempfile(fileext='.png')
+        ggsave(outfile, gpc, width=nchar(v$motiF)*2.8, height=3, limitsize = F)
+      
+      list(src = outfile,
+           contentType = 'image/png')
+    }, deleteFile = TRUE)
+  }) #end observe submit
   
   observeEvent(input$reset, {
     v$modFile <- NULL
     v$genFile <- NULL
   })  
   
-  output$score <- renderPlotly({
-    if (is.null(v$modFile) && is.null(v$genFile)) return()
-    ggplotly(gps, width = nchar(v$motiF)*300, height = 350)
-  })
+  # Download buttons
+  output$dl_a = downloadHandler(
+    filename = function() { paste0(v$motiF, '_combined.pdf') },
+    content = function(file) {
+      ggsave(file, gpa, width=nchar(v$motiF)*2.8, height=8.5, limitsize = F, device="pdf")
+    })
+  output$dl_s = downloadHandler(
+    filename = function() { paste0(v$motiF, '_score.pdf') },
+    content = function(file) {
+      ggsave(file, gps, width=nchar(v$motiF)*2.8, height=3, limitsize = F, device="pdf")
+    })
+  output$dl_i = downloadHandler(
+    filename = function() { paste0(v$motiF, '_ipdRatio.pdf') },
+    content = function(file) {
+      ggsave(file, gpi, width=nchar(v$motiF)*2.8, height=3, limitsize = F, device="pdf")
+    })
+  output$dl_c = downloadHandler(
+    filename = function() { paste0(v$motiF, '_coverage.pdf') },
+    content = function(file) {
+      ggsave(file, gpc, width=nchar(v$motiF)*2.8, height=3, limitsize = F, device="pdf")
+    })
+
   
-  output$ipd <- renderPlotly({
-    if (is.null(v$modFile) && is.null(v$genFile)) return()
-    ggplotly(gpi, width = nchar(v$motiF)*300, height = 350)
-  })
-  
-  output$coverage <- renderPlotly({
-    if (is.null(v$modFile) && is.null(v$genFile)) return()
-    ggplotly(gpc, width = nchar(v$motiF)*300, height = 350)
-  })
 
 }

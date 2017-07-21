@@ -1,8 +1,16 @@
 library(shiny)
-library(plotly)
 
 shinyUI(fluidPage(verticalLayout(
   titlePanel("SMRTMotif Plot"),
+  
+  tags$head(tags$style(
+    type="text/css",
+    "#combined img {max-width: auto; height: 900px;}",
+    "#score img {max-width: auto; height: 300px;}",
+    "#ipd img {max-width: auto; height: 300px;}",
+    "#coverage img {max-width: auto; height: 300px;}"
+  )),
+  
   wellPanel(fluidRow(
     column(
       4,
@@ -43,8 +51,21 @@ shinyUI(fluidPage(verticalLayout(
   )),
   tabsetPanel(
     type = "tabs",
-    tabPanel("Score", plotlyOutput("score", width = "auto"), style = "overflow-y:scroll;"),
-    tabPanel("ipdRatio", plotlyOutput("ipd", width = "auto"), style = "overflow-y:scroll;"),
-    tabPanel("Coverage", plotlyOutput("coverage", width = "auto"), style = "overflow-y:scroll;")
+    tabPanel("Combined", br(),
+             downloadButton('dl_a'),
+             imageOutput("combined"),
+             style = "overflow-y:scroll;text-align: center;"),
+    tabPanel("Score", br(),
+             downloadButton('dl_s'),
+             imageOutput("score"),
+             style = "overflow-y:scroll;text-align: center;"),
+    tabPanel("ipdRatio", br(),
+             downloadButton('dl_i'),
+             imageOutput("ipd"),
+             style = "overflow-y:scroll;text-align: center;"),
+    tabPanel("Coverage", br(),
+             downloadButton('dl_c'),
+             imageOutput("coverage"),
+             style = "overflow-y:scroll;text-align: center;")
   )
 )))
