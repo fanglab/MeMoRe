@@ -7,6 +7,7 @@ library(parallel)
 library(ggplot2)
 library(gridExtra)
 library(stringi)
+library(DT)
 
 options(shiny.maxRequestSize=200*1024^2) 
 
@@ -15,6 +16,7 @@ uploaddat <- function(rmodfile, rgenfile, motif, center) {
   csv <<- fread(csv_temp, sep = ",", header = T, verbose = F, drop = c(6, 7, 8, 11, 12, 13))  # Set csv parameters
   gene <<- readDNAStringSet(rgenfile)
   print(motif)
+  print("BLAH")
   print(center)
   print(strsplit(motif,""))
   print(strsplit(motif,"")[[1]])
@@ -26,7 +28,6 @@ uploaddat <- function(rmodfile, rgenfile, motif, center) {
 processdat <- function(motif, center, modificationtype) {
   print(motif)
   print(center)
-  print(1)
   motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
   motif_ref <- data.frame(sym = c("W", "S", "M", "K", "R", "Y", "B", "D", "H", "V", "N"), bases = c("(A|T)", "(C|G)", "(A|C)", "(G|T)", "(A|G)", "(C|T)", "(C|G|T)", "(A|G|T)", "(A|C|T)", "(A|C|G)", "(A|C|G|T)"))
   cl_max <- 8
@@ -35,7 +36,6 @@ processdat <- function(motif, center, modificationtype) {
   motif_f <- as.vector(motiftable$motifString)
   cov_cut_spec <- 10
   size_spec <- 100
-  print(2)
   
   gag <- which(width(gene) == max(width(gene)))
   csv2 <- csv[csv$refName == names(gene)[gag]] #csv2 = csv
@@ -126,23 +126,31 @@ processdat <- function(motif, center, modificationtype) {
     #cat("   + Merging csv and dat", "\r")
     
     ######
-    myreverse <- function(x,...){unlist(lapply(strsplit(as.vector(x),""),function(z)paste(rev(z),collapse="")))}
     dat2 <- list()
     for(z.count in 1:length(dog1$motif)) {
       z <- dog1$motif[z.count]
       ar <- paste(rev(stri_extract_all(z, regex = "\\([^)]+\\)|.")[[1]]), collapse = "")
       arya <- unlist(stri_extract_all_regex(genome_f, z))[1]
+      f_count <- stri_count_regex(genome_f, z)
+      r_count <- stri_count_regex(genome_r, ar)
       locations_f2 <- data.table(tpl = as.data.table(stri_locate_all_regex(genome_f, z))$start + transl_f,
-                                 motif = if (stri_count_regex(genome_f, z) == 0) 0 else rep(arya, stri_count_regex(genome_f, z)))
+                                 motif = if (f_count == 0) 0 else rep(arya, f_count))
       locations_r2 <- data.table(tpl = as.data.table(stri_locate_all_regex(genome_r, ar))$end - transl_r,
-                                 motif = if (stri_count_regex(genome_r, ar) == 0) 0 else rep(arya, stri_count_regex(genome_r, ar)))
+                                 motif = if (r_count == 0) 0 else rep(arya, r_count))
       loc_f_s2 <- locations_f2[!(locations_f2$tpl < param_sp[1] | locations_f2$tpl > param_sp[2]), ]
       loc_r_s2 <- locations_r2[!(locations_r2$tpl < param_sp[1] | locations_r2$tpl > param_sp[2]), ]
       merged_f2 <- merge(loc_f_s2, csv_sp_f, all = F)
       merged_r2 <- merge(loc_r_s2, csv_sp_r, all = F)
       dat2[[z.count]] <- data.table(rbind(merged_f2, merged_r2))
+      incProgress(.6/length(dog1$motif), detail = paste("Analyzing Motif", z.count))
       print(z.count)
     }
+    
+    # mcount, mscore, mipd, mcov
+    mcount = NA
+    mscore = NA
+    mipd = NA
+    mcov = NA
     
     ##################################### BOTTOM IN R/RSHINY, TOP IN C ################################33
     
@@ -252,7 +260,7 @@ processdat <- function(motif, center, modificationtype) {
       labs(y="IPD ratio") +
       prettify_mid
     
-    gp_scr <<- ggplot(datascore) + 
+    gp_scr <- ggplot(datascore) + 
       geom_violin(aes(x=base, y=values, color="blue", group=base, fill=as.factor(mod))) +
       facet_grid(. ~ pos) +
       scale_colour_manual(values=c("blue"="#619CCF")) +
@@ -299,7 +307,8 @@ processdat <- function(motif, center, modificationtype) {
       scale_colour_manual(values=c("red"="#F8766D")) +
       prettify_base
   
-    return(list(ga = graphcombined, gs = graphscore, gi = graphipd, gc = graphcoverage))
+    return(list(ga = graphcombined, gs = graphscore, gi = graphipd, gc = graphcoverage, 
+                mc = mcount, ms = mscore, mi = mipd, mco = mcov))
     
   }
 }
@@ -314,20 +323,59 @@ function(input, output, session) {
                       motiF=NULL, 
                       centeR=NULL,
                       modType=NULL)
+  newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage")
   
-  outMotifs <- reactive({
+  v$df <- setNames(data.table(matrix(nrow = 0, ncol = 9)), newcols)
+  
+  outMotifs <- observeEvent(input$motfile, {
     inFile = input$motfile
-    if (!is.null(inFile)){
-      print(inFile$datapath)
-      read.table(inFile$datapath, sep = ",", header = TRUE)[1:9]
-    } else {
-      return(list("Choose motif_summary.csv"))
-    }
+    isuploaded = F
+    if (!is.null(inFile) & isuploaded == F){
+      isuploaded = T
+      print("YES")
+      d <- read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)]
+      isolate(v$df <- rbind(v$df, setnames(d, old = colnames(d), new = newcols)))
+      print(v$df)
+    } 
   })
-  
+
   #for x values
   output$motifs <- renderUI({
-    selectInput("motifdropdown", "Choose a motif from motif_summary.csv", outMotifs()$motifString)
+    output$motiftable <- renderDataTable(v$df, selection = 'single')
+    dataTableOutput('motiftable')
+    #selectInput("motifdropdown", "Choose a motif from motif_summary.csv", outMotifs()$motifString)
+  })
+  
+  observeEvent(input$cleartable, {
+    v$df <- setNames(data.table(matrix(nrow = 0, ncol = 9)), newcols)
+  })
+  
+  observeEvent(input$addmotif, {
+    # Update Motiftablet
+    # ## newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage")
+    num = as.numeric(input$center)
+    if(grepl('^[A-Za-z]+$', input$motif)){
+      motif_to_add <- input$motif
+    }else{
+      showNotification("Enter valid motif.", type="error")
+      return(NULL)
+    }
+    if(!is.na(num) & num > 0 & num <= nchar(input$motif)){
+      center_to_add <- input$center
+    }else{
+      showNotification("Enter valid center position.", type="error")
+      return(NULL)
+    }
+    
+    # check if it already exists
+    if(motif_to_add %in% v$df$Motifs){
+      showNotification("Motif already in table.", type="error")
+    }
+    else{
+      rowadd <- setNames(data.table(motif_to_add, center_to_add, "", "", "", "", "", "", ""), newcols)
+      print(rowadd)
+      isolate(v$df <- rbind(v$df, rowadd))
+    }
   })
 
   observeEvent(input$submit, {
@@ -335,28 +383,10 @@ function(input, output, session) {
     v$modFile <- input$modfile$datapath
     v$genFile <- input$genfile$datapath
     v$motFile <- input$motfile$datapath
-    print(input$radio == 1)
-    if(input$radio == 1){
-      motifTable <- read.table(v$motFile, sep = ",", header = TRUE)[c(1,2,3,4,5,6,8,9,10,11)]
-      mot_of_int <- motifTable[motifTable$motifString==input$motifdropdown,]
-      v$motiF <- toString(mot_of_int$motifString)
-      v$centeR <- as.integer(mot_of_int$centerPos)
-      v$modType <- toString(mot_of_int$modificationType)
-    }else{
-      num = as.numeric(input$center)
-      if(grepl('^[A-Za-z]+$', input$motif)){
-        v$motiF <- input$motif
-      }else{
-        showNotification("Enter valid motif.", type="error")
-        return(NULL)
-      }
-      if(!is.na(num) & num > 0 & num <= nchar(input$motif)){
-        v$centeR <- input$center
-      }else{
-        showNotification("Enter valid center position.", type="error")
-        return(NULL)
-      }
-    }
+    v$motiF <- toString(v$df$Motifs[input$motiftable_rows_selected])
+    v$centeR <- as.numeric(v$df$"Modified position"[input$motiftable_rows_selected])
+    v$modType <- toString(v$df$Type[input$motiftable_rows_selected])
+    
     print(v$modFile)
     print(v$genFile)
     print(v$motiF)
@@ -364,27 +394,45 @@ function(input, output, session) {
     print(v$modType)
     # print(oldmodFile)
     # print(oldgenFile)
-    testifemptyorchanged = (
-      is.null(oldmodFile) & is.null(oldgenFile)) || 
-      !(oldmodFile == v$modFile & oldgenFile == v$genFile)
-    print(testifemptyorchanged)
-    if(testifemptyorchanged) {
-      print("preupload")
-      uploaddat(v$modFile, v$genFile, v$motiF, v$centeR)
-      print(csv)
-      print(gene)
-      print(motiftable)
-    }
+    
+    withProgress(message = 'Making plots', value = 0, {
+      # UPLOAD
+      testifemptyorchanged = (
+        is.null(oldmodFile) & is.null(oldgenFile)) || 
+        !(oldmodFile == v$modFile & oldgenFile == v$genFile)
+      print(testifemptyorchanged)
+      if(testifemptyorchanged) {
+        print("preupload")
+        incProgress(.2, detail = "Uploading Files")
+        uploaddat(v$modFile, v$genFile, v$motiF, v$centeR)
+        print(csv)
+        print(gene)
+        print(motiftable)
+      }
+      
+      # PROCESSING FILES
+      incProgress(.2, detail = "Processing Files")
+      graphs <- processdat(v$motiF, v$centeR, v$modType)
+    })
     
     # GRAPHS
-    graphs <- processdat(v$motiF, v$centeR, v$modType)
     gpa <<- graphs$ga
     gps <<- graphs$gs
     gpi <<- graphs$gi
     gpc <<- graphs$gc
+    mcount <<- graphs$mc
+    mscore <<- graphs$ms
+    mipd <<- graphs$mi
+    mcov <<- graphs$mco
     
     oldmodFile <<- v$modFile
     oldgenFile <<- v$genFile
+    
+    # Update Motiftablet
+    # ## newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage")
+    # rowadd <- setNames(data.table(v$motiF, v$centeR, v$modType, "", mcount, "", mscore, mipd, mcov), newcols)
+    # print(rowadd)
+    # outMotifs = rbind(outMotifs(), rowadd)
     
     output$combined <- renderImage({
       if (is.null(v$modFile) && is.null(v$genFile)) return()

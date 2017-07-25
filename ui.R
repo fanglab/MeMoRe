@@ -1,4 +1,5 @@
 library(shiny)
+library(DT)
 
 shinyUI(fluidPage(verticalLayout(
   titlePanel("SMRTMotif Plot"),
@@ -8,21 +9,32 @@ shinyUI(fluidPage(verticalLayout(
     "#combined img {max-width: auto; height: 900px;}",
     "#score img {max-width: auto; height: 300px;}",
     "#ipd img {max-width: auto; height: 300px;}",
-    "#coverage img {max-width: auto; height: 300px;}"
+    "#coverage img {max-width: auto; height: 300px;}",
+    "#submit { margin-top: 100px;}",
+    "#reset { margin-top: 100px;}"
   )),
   
   wellPanel(fluidRow(
     column(
       4,
-      fileInput('modfile', 'modifications.csv.gz', accept = c('.gz')),
-      fileInput('genfile', 'genome.fasta', accept = c('.fasta')),
-      fileInput('motfile', 'motif_summary.csv', accept = c('.csv'))
+      fileInput('modfile', 'modifications.csv.gz', accept = c('.gz'))
     ),
     column(
       4,
-      offset = 0,
-      uiOutput('motifs'),
-      h5("or", align = "center"),
+      fileInput('genfile', 'genome.fasta', accept = c('.fasta'))
+    ),
+    column(
+      4,
+      fileInput('motfile', 'motif_summary.csv', accept = c('.csv'))
+    ),
+    column(
+      12, 
+      uiOutput('motifs')
+    ),
+    column(
+      4,
+      offset = 4, align="center",
+      h5("or"),
       h5("specify a specific motif"),
       div(
         style = "display: inline-block;vertical-align:top; width: 180px;",
@@ -36,17 +48,14 @@ shinyUI(fluidPage(verticalLayout(
           textInput(
             inputId = "center",
             label = NULL,
-            value = "Center (e.g. 5)"
+            value = "Modified Position (e.g. 5)"
           )),
-      hr(),
-      radioButtons("radio", label = "Choose Motif Input Type:",
-                   choices = list("Motif from File" = 1, 
-                                  "Motif from Text Box" = 2), selected = 1)
+      actionButton("addmotif", "Add motif"), actionButton("cleartable", "Clear table")
     ),
     column(
-      4, 
-      actionButton("submit", "Submit", style = "color: white; background-color: #337AB7"),
-      actionButton("reset", "Clear")
+      4, align="right",
+      actionButton("submit", "Generate plots for selected motif", style = "color: white; background-color: #337AB7"),
+      actionButton("reset", "Clear plots")
     )
   )),
   tabsetPanel(
