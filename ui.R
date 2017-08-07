@@ -9,9 +9,7 @@ shinyUI(fluidPage(verticalLayout(
     "#combined img {max-width: auto; height: 900px;}",
     "#score img {max-width: auto; height: 300px;}",
     "#ipd img {max-width: auto; height: 300px;}",
-    "#coverage img {max-width: auto; height: 300px;}",
-    "#submit { margin-top: 100px;}",
-    "#reset { margin-top: 100px;}"
+    "#coverage img {max-width: auto; height: 300px;}"
   )),
   
   wellPanel(fluidRow(
@@ -28,32 +26,31 @@ shinyUI(fluidPage(verticalLayout(
       fileInput('motfile', 'motif_summary.csv', accept = c('.csv'))
     ),
     column(
-      12, 
-      uiOutput('motifs')
-    ),
-    column(
       4,
       offset = 4, align="center",
-      h5("or"),
-      h5("specify a specific motif"),
+      h5("Add a specific motif to table"),
       div(
         style = "display: inline-block;vertical-align:top; width: 180px;",
         textInput(
           inputId = "motif",
           label = NULL,
-          value = "Motif (e.g. CAAAAA)"
+          value = "Motif (e.g. GATC)"
         )
       ),
       div(style = "display: inline-block;vertical-align:top; width: 180px;",
           textInput(
             inputId = "center",
             label = NULL,
-            value = "Modified Position (e.g. 5)"
+            value = "Modified Position (e.g. 1)"
           )),
       actionButton("addmotif", "Add motif"), actionButton("cleartable", "Clear table")
     ),
     column(
-      4, align="right",
+      12, 
+      uiOutput('motifs')
+    ),
+    column(
+      4, offset = 4, align="center",
       actionButton("submit", "Generate plots for selected motif", style = "color: white; background-color: #337AB7"),
       actionButton("reset", "Clear plots")
     )
