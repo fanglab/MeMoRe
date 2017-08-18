@@ -1,5 +1,3 @@
-# PICK UP FROM LINES 33-48 TRYING TO AUTOMATE MODIFICATIOn TYPE WITHOUT HAVING USER TYPE IT IN
-
 library(shiny)
 library(data.table)
 library(R.utils)
@@ -35,7 +33,7 @@ function(input, output, session) {
   refinedat <- function(x) {
     modnum <- gsub("[^0-9]","",x[3])
     modletter <- ifelse(modnum=="", "x", as.numeric(modnum))
-    o_type <- paste0(modletter, "m", substring(x[1], as.numeric(x[2])+1, as.numeric(x[2])+1))
+    o_type <- paste0(modletter, substring(x[1], as.numeric(x[2])+1, as.numeric(x[2])+1))
     o_fraction <- format(round(as.numeric(x[4]),2), nsmall=2)
     o_score <- round(as.numeric(x[7]))
     o_ipd <- format(round(as.numeric(x[8]),2), nsmall=2) 
@@ -145,7 +143,7 @@ function(input, output, session) {
     else{ # if not add to v$df
       # assume modification occurs at specified center
       
-      modtype <- paste0("xm", toupper(substring(motif_to_add, as.numeric(center_to_add)+1, as.numeric(center_to_add)+1)))
+      modtype <- paste0("x", toupper(substring(motif_to_add, as.numeric(center_to_add)+1, as.numeric(center_to_add)+1)))
       rowadd <- setNames(data.table(motif_to_add, center_to_add, modtype, "", "", "", "", "", "", "No"), newcols)
       print(rowadd)
       isolate(v$df <- rbind(v$df, rowadd))
