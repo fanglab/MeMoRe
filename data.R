@@ -1,5 +1,9 @@
 uploaddat <- function(rmodfile, rgenfile, motif, center) {
-  csv_temp <- gunzip(rmodfile, remove = T, temporary = T, overwrite = T)
+  if (summary(file(rmodfile))$class == "gzfile") {
+    csv_temp <- gunzip(rmodfile, remove = T, temporary = T, overwrite = T)
+  } else {
+    csv_temp <- rmodfile
+  }
   csv <<- fread(csv_temp, sep = ",", header = T, verbose = F, drop = c(6, 7, 8, 11, 12, 13))  # Set csv parameters
   gene <<- readDNAStringSet(rgenfile)
   motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
@@ -185,7 +189,7 @@ processdat <- function(motif, center, modificationtype) {
     datascore <<- datascore
     dataipd <- dataipd
     datacoverage <- datacoverage
-    graphtitle <- paste0(substr(motif_f[j], 1, center), modificationtype, substr(motif_f[j], center+2, nchar(motif_f[j]))) 
+    graphtitle <- paste0(substr(motif_f[j], 1, center), "(",modificationtype,")", substr(motif_f[j], center+2, nchar(motif_f[j]))) 
     print(graphtitle)
     print(datascore)
     print(dataipd)

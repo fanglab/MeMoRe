@@ -15,7 +15,7 @@ shinyUI(fluidPage(verticalLayout(
   wellPanel(fluidRow(
     column(
       4,
-      fileInput('modfile', 'modifications.csv.gz', accept = c('.gz'))
+      fileInput('modfile', 'modifications.csv(.gz)', accept = c('.gz', '.csv'))
     ),
     column(
       4,
@@ -26,52 +26,47 @@ shinyUI(fluidPage(verticalLayout(
       fileInput('motfile', 'motif_summary.csv', accept = c('.csv'))
     ),
     column(
-      4,
-      offset = 4, align="center",
+      4, align="center",
       h5("Add a specific motif to table"),
       div(
         style = "display: inline-block;vertical-align:top; width: 180px;",
         textInput(
           inputId = "motif",
-          label = NULL,
-          value = "Motif (e.g. GATC)"
+          label = "Motif",
+          value = "GATC"
         )
       ),
-      div(style = "display: inline-block;vertical-align:top; width: 180px;",
-          textInput(
-            inputId = "center",
-            label = NULL,
-            value = "Modified Position (e.g. 1)"
-          )),
-      actionButton("addmotif", "Add motif"), actionButton("cleartable", "Clear table")
+      div(
+        style = "display: inline-block;vertical-align:top; width: 100px;",
+        textInput(
+          inputId = "center",
+          label = "Modified Pos.",
+          value = "1"
+        )
+      ),
+      br(),
+      actionButton("addmotif", "Add motif"), 
+      actionButton("cleartable", "Clear table"),
+      br(),br(),
+      verbatimTextOutput("updatenom"),
+      br(),
+      actionButton("submit", "Generate plots for selected motifs", style = "color: white; background-color: #337AB7")
     ),
     column(
-      12, 
+      8, 
       uiOutput('motifs')
-    ),
-    column(
-      4, offset = 4, align="center",
-      actionButton("submit", "Generate plots for selected motif", style = "color: white; background-color: #337AB7"),
-      actionButton("reset", "Clear plots")
     )
   )),
-  tabsetPanel(
-    type = "tabs",
-    tabPanel("Combined", br(),
-             downloadButton('dl_a'),
-             imageOutput("combined"),
-             style = "overflow-y:scroll;text-align: center;"),
-    tabPanel("Score", br(),
-             downloadButton('dl_s'),
-             imageOutput("score"),
-             style = "overflow-y:scroll;text-align: center;"),
-    tabPanel("ipdRatio", br(),
-             downloadButton('dl_i'),
-             imageOutput("ipd"),
-             style = "overflow-y:scroll;text-align: center;"),
-    tabPanel("Coverage", br(),
-             downloadButton('dl_c'),
-             imageOutput("coverage"),
-             style = "overflow-y:scroll;text-align: center;")
-  )
+  h4("Generated Plots"),
+  wellPanel(fluidRow(
+    column(
+      4, align="center",
+      downloadButton('dl_everything', "Download all generated plots as .zip")
+    ),
+    column(
+      8, 
+      uiOutput('dl_dt')
+    )
+  )),
+  uiOutput('images')
 )))

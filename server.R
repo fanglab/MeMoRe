@@ -14,7 +14,7 @@ library(DT)
 # call functions necessary for analysis
 source("data.R")
 
-options(shiny.maxRequestSize=200*1024^2) 
+options(shiny.maxRequestSize=1000*1024^2) 
 
 oldmodFile <<- NULL
 oldgenFile <<- NULL
@@ -26,48 +26,102 @@ function(input, output, session) {
                       motiF=NULL, 
                       centeR=NULL,
                       modType=NULL)
-  newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage")
-  
-  v$df <- setNames(data.table(matrix(nrow = 0, ncol = 9)), newcols)
-  
+  newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage","Plots Generated")
+  newcols_dl = c("Motifs","Modified position","Type")
+
+  v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols))), newcols)
+  v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols_dl))), newcols_dl)
+
+  refinedat <- function(x) {
+    modnum <- gsub("[^0-9]","",x[3])
+    modletter <- ifelse(modnum=="", "x", as.numeric(modnum))
+    o_type <- paste0(modletter, "m", substring(x[1], as.numeric(x[2])+1, as.numeric(x[2])+1))
+    o_fraction <- format(round(as.numeric(x[4]),2), nsmall=2)
+    o_score <- round(as.numeric(x[7]))
+    o_ipd <- format(round(as.numeric(x[8]),2), nsmall=2) 
+    o_cov <- round(as.numeric(x[9]))
+    list(o_type, o_fraction, o_score, o_ipd, o_cov)
+  }
+
+  updatetable <- function() {
+    source <- t(as.data.table(apply(v$df, 1, refinedat)))
+    isolate(v$df$Type <- unlist(source[,1]))
+    isolate(v$df$"% motifs detected" <- unlist(source[,2]))
+    isolate(v$df$"Mean Score" <- unlist(source[,3]))
+    isolate(v$df$"Mean IPD ratio" <- unlist(source[,4]))
+    isolate(v$df$"Mean Coverage" <- unlist(source[,5]))
+  }
+
+  # update v$df everytime it changes
+  # observeEvent(v$df, {
+  #   # update modtype
+  #   checkmod <- function(x) {
+  #     modnum <- gsub("[^0-9]","",x[3])
+  #     modletter <- ifelse(modnum=="", "x", as.numeric(modnum))
+  #     o_type <- paste0(modletter, "m", substring(x[1], as.numeric(x[2])+1, as.numeric(x[2])+1))
+  #     o_fraction <- format(round(as.numeric(x[4]),2), nsmall=2)
+  #     o_score <- round(as.numeric(x[7]))
+  #     o_ipd <- format(round(as.numeric(x[8]),2), nsmall=2) 
+  #     o_cov <- round(as.numeric(x[9]))
+  #     list(o_type, o_fraction, o_score, o_ipd, o_cov)
+  #   }
+  #   print("TEST")
+  #   source <- t(as.data.table(apply(v$df, 1, checkmod)))
+  #   print(source)
+  #   isolate(v$df$Type <- unlist(source[,1]))
+  #   print("TEST1")
+  #   isolate(v$df$"% motifs detected" <- unlist(source[,2]))
+  #   isolate(v$df$"Mean Score" <- unlist(source[,3]))
+  #   isolate(v$df$"Mean IPD ratio" <- unlist(source[,4]))
+  #   isolate(v$df$"Mean Coverage" <- unlist(source[,5]))
+  # })
+
+  # upload motiffile to motiftable
   outMotifs <- observeEvent(input$motfile, {
     inFile = input$motfile
+    
     if (!is.null(inFile)){
-      d <- read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)]
-      for (i in 1:nrow(d)) {
-        print(i)
-        modiftype <- d$modificationType[i]
-        checkC <- ifelse(grepl("\\d", modiftype), gsub('.*-([0-9]+).*','\\1',modiftype), "X")
-        checkpos <- as.numeric(d$centerPos[i]) + 1
-        print(paste0(checkC,"m", substring(d$motifString[i], checkpos, checkpos)))
-        d$modificationType[i] <- paste0(checkC,"m", substring(d$motifString[i], checkpos, checkpos))
-      }
+      d <- cbind(read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)], "Plots Generated" = "No")
       isolate(v$df <- rbind(v$df, setnames(d, old = colnames(d), new = newcols)))
       print(v$df)
+
+      updatetable()
     } 
+
   })
 
   # render DT
   output$motifs <- renderUI({
-    output$motiftable <- renderDataTable(v$df, selection = 'single')
+    output$motiftable <- renderDataTable(v$df, options=list(iDisplayLength=8, bLengthChange=0))
     dataTableOutput('motiftable')
   })
   
+  # render dl DT
+  output$dl_dt <- renderUI({
+    output$dl_dt2 <- renderDataTable({v$dldf}, selection = 'single', options=list(iDisplayLength=5, bLengthChange=0, bFilter=0, bInfo=0, bAutoWidth=0))
+    dataTableOutput('dl_dt2')
+  })
+
   # clear table if motif_summary.csv not selected, else replace table with motif_summary.csv
   observeEvent(input$cleartable, {
     inFile = input$motfile
-    if (!is.null(inFile) & isuploaded == F){
-      d <- read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)]
-      isolate(v$df <- rbind(v$df, setnames(d, old = colnames(d), new = newcols)))
+    if (!is.null(inFile)){
+      d <- cbind(read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)], "Plots Generated" = "No", stringsAsFactors = FALSE)
+      d$"Plots Generated"[which(d$motifString %in% v$dldf$Motifs)] <- "Yes"
+
+      
+      isolate(v$df <- setnames(d, old = colnames(d), new = newcols))
       print(v$df)
+      updatetable()
     }else{
-      v$df <- setNames(data.table(matrix(nrow = 0, ncol = 9)), newcols)
+      v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols))), newcols)
     } 
   })
   
   observeEvent(input$addmotif, {
     # Update Motiftablet
-    num = as.numeric(input$center)
+    num <- as.numeric(input$center)
+    modtypnum <- as.numeric(input$modtype)
     
     # check that motif contains only alpha
     if(grepl('^[A-Za-z]+$', input$motif)){
@@ -91,8 +145,8 @@ function(input, output, session) {
     else{ # if not add to v$df
       # assume modification occurs at specified center
       
-
-      rowadd <- setNames(data.table(motif_to_add, center_to_add, "", "", "", "", "", "", ""), newcols)
+      modtype <- paste0("xm", toupper(substring(motif_to_add, as.numeric(center_to_add)+1, as.numeric(center_to_add)+1)))
+      rowadd <- setNames(data.table(motif_to_add, center_to_add, modtype, "", "", "", "", "", "", "No"), newcols)
       print(rowadd)
       isolate(v$df <- rbind(v$df, rowadd))
     }
@@ -101,7 +155,7 @@ function(input, output, session) {
   observeEvent(input$submit, {
     # modifications.csv.gz check
     if(is.null(input$modfile)){
-      showNotification("Upload modifications.csv.gz", type="error")
+      showNotification("Upload modifications.csv(.gz)", type="error")
       return(NULL)
     }
     # genome.fasta check
@@ -124,61 +178,89 @@ function(input, output, session) {
     v$modFile <- input$modfile$datapath
     v$genFile <- input$genfile$datapath
     v$motFile <- input$motfile$datapath
-    v$motiF <- toString(v$df$Motifs[input$motiftable_rows_selected])
-    v$centeR <- as.numeric(v$df$"Modified position"[input$motiftable_rows_selected])
-    v$modType <- toString(v$df$Type[input$motiftable_rows_selected])
-    
-    # Progress Bar (most time intensive)
-    withProgress(message = 'Making plots', value = 0, {
-      # test if uploaded genome and modifications files are changed
-      testifemptyorchanged = (is.null(oldmodFile) & is.null(oldgenFile)) || !(oldmodFile == v$modFile & oldgenFile == v$genFile)
+
+    v$motiF <- NULL
+    v$centeR <- NULL
+    v$modType <- NULL
+    for(k in 1:length(input$motiftable_rows_selected)){
+      v$motiF[k] <- toString(v$df$Motifs[input$motiftable_rows_selected[k]])
+      v$centeR[k] <- as.numeric(v$df$"Modified position"[input$motiftable_rows_selected[k]])
+      v$modType[k] <- toString(v$df$Type[input$motiftable_rows_selected[k]])
+    }
+
+    if(any(v$motiF %in% v$dldf$Motifs)){
+        showNotification("Plots for one of the selected motifs were already generated.", type="error")
+    }
+    else{ # if not add to v$dldf
       
-      # If changed, reupload
-      if(testifemptyorchanged) {
-        incProgress(.2, detail = "Uploading Files")
-        uploaddat(v$modFile, v$genFile, v$motiF, v$centeR)
+      for(j in 1:length(input$motiftable_rows_selected)){
+        # Progress Bar (most time intensive)
+        withProgress(message = 'Making plots', value = 0, {
+          # test if uploaded genome and modifications files are changed
+          isemptyorchanged = (is.null(oldmodFile) & is.null(oldgenFile)) || !(oldmodFile == v$modFile & oldgenFile == v$genFile)
+          
+          # If changed, reupload
+          if(isemptyorchanged) {
+            incProgress(.2, detail = "Uploading Files")
+            print("TESTING-------------")
+            print(j)
+            uploaddat(v$modFile, v$genFile, v$motiF[j], v$centeR[j])
+          }
+          
+          # Continue to process files
+          incProgress(.2, detail = "Processing Files")
+          graphs <- processdat(v$motiF[j], v$centeR[j], v$modType[j])
+        })
+        
+        # GRAPHS
+        assign(paste0(v$motiF[j], ".gpa"), graphs$ga, envir = .GlobalEnv)
+        assign(paste0(v$motiF[j], ".gps"), graphs$gs, envir = .GlobalEnv)
+        assign(paste0(v$motiF[j], ".gpi"), graphs$gi, envir = .GlobalEnv)
+        assign(paste0(v$motiF[j], ".gpc"), graphs$gc, envir = .GlobalEnv)
+        
+        # Below irrelevant rn
+        assign(paste0(v$motiF[j], ".mcount"), graphs$mc, envir = .GlobalEnv)
+        assign(paste0(v$motiF[j], ".mscore"), graphs$ms, envir = .GlobalEnv)
+        assign(paste0(v$motiF[j], ".mipd"), graphs$mi, envir = .GlobalEnv)
+        assign(paste0(v$motiF[j], ".mcov"), graphs$mco, envir = .GlobalEnv)
+
+        rowadd <- setNames(data.table(v$motiF[j], v$centeR[j], v$modType[j]), newcols_dl)
+        print(rowadd)
+        isolate(v$dldf <- rbind(v$dldf, rowadd))
+
+        isolate(v$df$"Plots Generated" <- as.character(v$df$"Plots Generated"))
+        isolate(v$df$"Plots Generated"[input$motiftable_rows_selected[j]] <- "Yes")
+        isolate(v$df$"Plots Generated" <- as.factor(v$df$"Plots Generated"))
+
+        oldmodFile <<- v$modFile
+        oldgenFile <<- v$genFile
       }
-      
-      # Continue to process files
-      incProgress(.2, detail = "Processing Files")
-      graphs <- processdat(v$motiF, v$centeR, v$modType)
-    })
+    }
     
-    # GRAPHS
-    gpa <<- graphs$ga
-    gps <<- graphs$gs
-    gpi <<- graphs$gi
-    gpc <<- graphs$gc
-    
-    # Below irrelevant rn
-    mcount <<- graphs$mc
-    mscore <<- graphs$ms
-    mipd <<- graphs$mi
-    mcov <<- graphs$mco
-    
-    oldmodFile <<- v$modFile
-    oldgenFile <<- v$genFile
-    
-    # Update Motiftablet
-    # ## newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage")
-    # rowadd <- setNames(data.table(v$motiF, v$centeR, v$modType, "", mcount, "", mscore, mipd, mcov), newcols)
-    # print(rowadd)
-    # outMotifs = rbind(outMotifs(), rowadd)
-    
+  }) #end observe submit
+
+  # observe selection in dl_dt
+  observeEvent(input$dl_dt2_rows_selected, {
+    motif_selected <- v$dldf$Motifs[input$dl_dt2_rows_selected]
+    gpa <- get(paste0(motif_selected, ".gpa"))
+    gps <- get(paste0(motif_selected, ".gps"))
+    gpi <- get(paste0(motif_selected, ".gpi"))
+    gpc <- get(paste0(motif_selected, ".gpc"))
+
     output$combined <- renderImage({
-      if (is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) return()
+      if ((is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) | length(input$dl_dt2_rows_selected) == 0) return()
       
       outfile <- tempfile(fileext='.png')
-      ggsave(outfile, gpa, width=nchar(v$motiF)*2.8, height=9, limitsize = F)
+      ggsave(outfile, gpa, width=nchar(motif_selected)*2.8, height=9, limitsize = F)
       
       list(src = outfile,
            contentType = 'image/png')
     }, deleteFile = TRUE)
     
     output$score <- renderImage({
-      if (is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) return()
+      if ((is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) | length(input$dl_dt2_rows_selected) == 0) return()
       outfile <- tempfile(fileext='.png')
-        ggsave(outfile, gps, width=nchar(v$motiF)*2.8, height=3, limitsize = F)
+        ggsave(outfile, gps, width=nchar(motif_selected)*2.8, height=3, limitsize = F)
       
       list(src = outfile,
            contentType = 'image/png')
@@ -186,51 +268,114 @@ function(input, output, session) {
     print("WHAT")
     
     output$ipd <- renderImage({
-      if (is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) return()
+      if ((is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) | length(input$dl_dt2_rows_selected) == 0) return()
       
       outfile <- tempfile(fileext='.png')
-        ggsave(outfile, gpi, width=nchar(v$motiF)*2.8, height=3, limitsize = F)
+        ggsave(outfile, gpi, width=nchar(motif_selected)*2.8, height=3, limitsize = F)
       
       list(src = outfile,
            contentType = 'image/png')
     }, deleteFile = TRUE)
     
     output$coverage <- renderImage({
-      if (is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) return()
+      if ((is.null(v$modFile) && is.null(v$genFile) && is.null(v$motFile)) | length(input$dl_dt2_rows_selected) == 0) return()
       
       outfile <- tempfile(fileext='.png')
-        ggsave(outfile, gpc, width=nchar(v$motiF)*2.8, height=3, limitsize = F)
+        ggsave(outfile, gpc, width=nchar(motif_selected)*2.8, height=3, limitsize = F)
       
       list(src = outfile,
            contentType = 'image/png')
     }, deleteFile = TRUE)
-  }) #end observe submit
+
+    # Download buttons
+    output$dl_a = downloadHandler(
+      filename = function() { paste0(motif_selected, '_combined.pdf') },
+      content = function(file) {
+        ggsave(file, gpa, width=nchar(motif_selected)*2.8, height=8.5, limitsize = F, device="pdf")
+      })
+    output$dl_s = downloadHandler(
+      filename = function() { paste0(motif_selected, '_score.pdf') },
+      content = function(file) {
+        ggsave(file, gps, width=nchar(motif_selected)*2.8, height=3, limitsize = F, device="pdf")
+      })
+    output$dl_i = downloadHandler(
+      filename = function() { paste0(motif_selected, '_ipdRatio.pdf') },
+      content = function(file) {
+        ggsave(file, gpi, width=nchar(motif_selected)*2.8, height=3, limitsize = F, device="pdf")
+      })
+    output$dl_c = downloadHandler(
+      filename = function() { paste0(motif_selected, '_coverage.pdf') },
+      content = function(file) {
+        ggsave(file, gpc, width=nchar(motif_selected)*2.8, height=3, limitsize = F, device="pdf")
+      })
+
+    output$images <- renderUI({
+        tabsetPanel(
+          type = "tabs",
+          tabPanel("Combined", br(),
+                  downloadButton('dl_a'),br(),
+                  imageOutput("combined"),
+                  style = "overflow-y:scroll;"),
+          tabPanel("Score", br(),
+                  downloadButton('dl_s'),br(),
+                  imageOutput("score"),
+                  style = "overflow-y:scroll;"),
+          tabPanel("ipdRatio", br(),
+                  downloadButton('dl_i'),br(),
+                  imageOutput("ipd"),
+                  style = "overflow-y:scroll;"),
+          tabPanel("Coverage", br(),
+                  downloadButton('dl_c'),br(),
+                  imageOutput("coverage"),
+                  style = "overflow-y:scroll;")
+        )
+    })
+  })
   
-  observeEvent(input$reset, {
-    v$modFile <- NULL
-    v$genFile <- NULL
-    v$motFile <- NULL
-  })  
+  output$updatenom = renderPrint({
+      s = input$motiftable_rows_selected
+      if (length(s)) {
+        cat("These motifs were selected: \n\n")
+        cat(paste(v$df$Motifs[s], collapse="\n "))
+      }
+    })
   
-  # Download buttons
-  output$dl_a = downloadHandler(
-    filename = function() { paste0(v$motiF, '_combined.pdf') },
+  output$dl_everything <- downloadHandler(
+    filename = function(){
+      paste0(Sys.Date(),"_motifplots.zip")
+    },
     content = function(file) {
-      ggsave(file, gpa, width=nchar(v$motiF)*2.8, height=8.5, limitsize = F, device="pdf")
-    })
-  output$dl_s = downloadHandler(
-    filename = function() { paste0(v$motiF, '_score.pdf') },
-    content = function(file) {
-      ggsave(file, gps, width=nchar(v$motiF)*2.8, height=3, limitsize = F, device="pdf")
-    })
-  output$dl_i = downloadHandler(
-    filename = function() { paste0(v$motiF, '_ipdRatio.pdf') },
-    content = function(file) {
-      ggsave(file, gpi, width=nchar(v$motiF)*2.8, height=3, limitsize = F, device="pdf")
-    })
-  output$dl_c = downloadHandler(
-    filename = function() { paste0(v$motiF, '_coverage.pdf') },
-    content = function(file) {
-      ggsave(file, gpc, width=nchar(v$motiF)*2.8, height=3, limitsize = F, device="pdf")
-    })
+      owd <- setwd(tempdir())
+      on.exit(setwd(owd))
+      files <- NULL;
+
+      withProgress(message = 'Zipping files', value = 0, {
+        #loop through the plots
+        for (i in 1:nrow(v$dldf)){
+          motif_selected <- v$dldf$Motifs[i]
+
+          gpa <- get(paste0(motif_selected, ".gpa"))
+          gps <- get(paste0(motif_selected, ".gps"))
+          gpi <- get(paste0(motif_selected, ".gpi"))
+          gpc <- get(paste0(motif_selected, ".gpc"))
+          gpa_f <- paste0(motif_selected, '_combined.pdf')
+          gps_f <- paste0(motif_selected, '_score.pdf')
+          gpi_f <- paste0(motif_selected, '_ipdRatio.pdf')
+          gpc_f <- paste0(motif_selected, '_coverage.pdf')
+
+          ggsave(gpa_f, gpa, width=nchar(motif_selected)*2.8, height=8.5, limitsize = F, device="pdf")
+          ggsave(gps_f, gps, width=nchar(motif_selected)*2.8, height=3, limitsize = F, device="pdf")
+          ggsave(gpi_f, gpi, width=nchar(motif_selected)*2.8, height=3, limitsize = F, device="pdf")
+          ggsave(gpc_f, gpc, width=nchar(motif_selected)*2.8, height=3, limitsize = F, device="pdf")
+          files <- c(gpa_f,gps_f,gpi_f,gpc_f,files)
+
+          incProgress((1)/nrow(v$dldf), detail = paste("Downloading Plots for Motif", i))
+        }
+      })
+
+      #create the zip file
+      zip(file,files)
+    }
+  )
+
 }
