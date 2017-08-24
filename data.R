@@ -1,18 +1,60 @@
-uploaddat <- function(rmodfile, rgenfile, motif, center) {
+# improved list of objects
+.ls.objects <- function (pos = 1, pattern, order.by,
+                        decreasing=FALSE, head=FALSE, n=5) {
+    napply <- function(names, fn) sapply(names, function(x)
+                                         fn(get(x, pos = pos)))
+    names <- ls(pos = pos, pattern = pattern)
+    obj.class <- napply(names, function(x) as.character(class(x))[1])
+    obj.mode <- napply(names, mode)
+    obj.type <- ifelse(is.na(obj.class), obj.mode, obj.class)
+    obj.prettysize <- napply(names, function(x) {
+                           capture.output(format(utils::object.size(x), units = "auto")) })
+    obj.size <- napply(names, object.size)
+    obj.dim <- t(napply(names, function(x)
+                        as.numeric(dim(x))[1:2]))
+    vec <- is.na(obj.dim)[, 1] & (obj.type != "function")
+    obj.dim[vec, 1] <- napply(names, length)[vec]
+    out <- data.frame(obj.type, obj.size, obj.prettysize, obj.dim)
+    names(out) <- c("Type", "Size", "PrettySize", "Rows", "Columns")
+    if (!missing(order.by))
+        out <- out[order(out[[order.by]], decreasing=decreasing), ]
+    if (head)
+        out <- head(out, n)
+    out
+}
+
+# shorthand
+lsos <- function(..., n=200) {
+    .ls.objects(..., order.by="Size", decreasing=TRUE, head=TRUE, n=n)
+}
+
+# print mem usage
+memuse <- function(string) {
+  print(string)
+  print(mem_used())
+}
+
+
+uploaddat <- function(rmodfile, rgenfile, motif, center) {  
   if (summary(file(rmodfile))$class == "gzfile") {
     csv_temp <- gunzip(rmodfile, remove = T, temporary = T, overwrite = T)
   } else {
     csv_temp <- rmodfile
   }
-  csv <<- fread(csv_temp, sep = ",", header = T, verbose = F, drop = c(6, 7, 8, 11, 12, 13))  # Set csv parameters
+  csv_t <- fread(csv_temp, sep = ",", header = T, verbose = F, drop = c(6, 7, 8, 11, 12, 13))  # Set csv parameters
+  memuse("- after csv_t")
   gene <<- readDNAStringSet(rgenfile)
-  motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
+  memuse("- after gene")
+  csv2 <- csv_t[csv_t$refName == names(gene)[which(width(gene) == max(width(gene)))]]
+  csv2 <- csv2[complete.cases(csv2), ]
+  csv2 <<- csv2[order(csv2$tpl),]
+  memuse("- after csv2")
+  rm(csv_t)
+  memuse("- after rm(csv_t)")
 }
 
 processdat <- function(motif, center, modificationtype) {
-  print(motif)
-  print(center)
-  motiftable <<- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
+  motiftable <- data.table(motifString = motif, centerPos = center, modificationType =strsplit(motif,"")[[1]][as.integer(center)+1])
   motif_ref <- data.frame(sym = c("W", "S", "M", "K", "R", "Y", "B", "D", "H", "V", "N"), bases = c("(A|T)", "(C|G)", "(A|C)", "(G|T)", "(A|G)", "(C|T)", "(C|G|T)", "(A|G|T)", "(A|C|T)", "(A|C|G)", "(A|C|G|T)"))
   cl_max <- 8
   modtype <- as.vector(motiftable$modificationType)
@@ -22,20 +64,27 @@ processdat <- function(motif, center, modificationtype) {
   size_spec <- 100
   
   gag <- which(width(gene) == max(width(gene)))
-  csv2 <- csv[csv$refName == names(gene)[gag]] #csv2 = csv
+  # csv2 <<- csv[csv$refName == names(gene)[gag]] #csv2 = csv
+  # memuse("- after csv2")
   
-  # R and F prep
-  csv2 <- csv2[complete.cases(csv2), ]
-  csv2 <- csv2[order(csv2$tpl),]
+  # # R and F prep
+  # csv2 <- csv2[complete.cases(csv2), ]
+  # memuse("- after csv2")
+  # csv2 <- csv2[order(csv2$tpl),]
+  # memuse("- after csv2")
   param <- c(csv2$tpl[1], csv2$tpl[nrow(csv2)])  # create reverse genome
+  memuse("- after param")
   genome_f <- toString(gene[[gag]])
+  memuse("- after genome_f")
   genome_r <- chartr("GATC", "CTAG", genome_f)  # chart
-  csv_r <- csv2[(csv2$strand == 1), ]  # separate csv r by strandness
-  csv_f <- csv2[(csv2$strand == 0), ]  # separate csv f by strandness
+  memuse("- after genome_r")
   # cluster prep
-  csv_sp <- csv[csv$coverage >= cov_cut_spec, ]
-  csv_sp_f <- csv_f[csv_f$coverage >= cov_cut_spec, ]
-  csv_sp_r <- csv_r[csv_r$coverage >= cov_cut_spec, ]
+  csv_sp <- csv2[csv2$coverage >= cov_cut_spec, ]
+  memuse("- after csv_sp")
+  csv_sp_f <- csv2[(csv2$strand == 0), ][csv2[(csv2$strand == 0), ]$coverage >= cov_cut_spec, ]
+  memuse("- after csv_sp_f")
+  csv_sp_r <- csv2[(csv2$strand == 1), ][csv2[(csv2$strand == 1), ]$coverage >= cov_cut_spec, ]
+  memuse("- after csv_sp_r")
   
   for (j in 1:length(motif_f)){ 
     new_mots <- nchar(motif_f[j])
@@ -82,7 +131,6 @@ processdat <- function(motif, center, modificationtype) {
     
     #PREPARING DATA
     dog1.me <- do.call(rbind, new_list_o)  # all checked at this point # count>=5 & mean_r<1.5 & -log10 p <3
-    dog1.me2 <- dog1.me[1]
     dog1 <- dog1.me[2:ncol(dog1.me)]          ## NEW DATA prep CSV
     csv_sp_2 <- csv_sp[order(csv_sp$tpl)][complete.cases(csv_sp[order(csv_sp$tpl)]), ]
     param_sp <- c(csv_sp_2$tpl[1], csv_sp_2$tpl[nrow(csv_sp_2)])
@@ -90,6 +138,7 @@ processdat <- function(motif, center, modificationtype) {
     dat2.A <- dat2.A.1[sample(nrow(dat2.A.1), size_spec), ]
     
     exportme <- list(transl_f, size_spec, param_sp)
+    memuse("- preparing data for moteity loop")
     
     ## Future Improvement: Parallelize
 
@@ -110,8 +159,9 @@ processdat <- function(motif, center, modificationtype) {
       merged_r2 <- merge(loc_r_s2, csv_sp_r, all = F)
       dat2[[z.count]] <- data.table(rbind(merged_f2, merged_r2))
       incProgress(.6/length(dog1$motif), detail = paste("Analyzing Motif", z.count))
-      print(z.count)
+      #print(z.count)
     }
+    memuse("- after loop through motif moteities")
     
     # mcount, mscore, mipd, mcov
     mcount = NA
@@ -157,6 +207,7 @@ processdat <- function(motif, center, modificationtype) {
     dataipd <- do.call(rbind, ipdlist)
     datacoverage <- do.call(rbind, coveragelist)
     datacount <- do.call(rbind, countlist)
+    memuse("- after create graphing data")
     
     prettify_base <- theme(
       panel.background=element_rect(fill = NA,color="gray"), 
@@ -186,14 +237,9 @@ processdat <- function(motif, center, modificationtype) {
         strip.text.x=element_blank()
       )
     
-    datascore <<- datascore
     dataipd <- dataipd
     datacoverage <- datacoverage
     graphtitle <- paste0(substr(motif_f[j], 1, center), "(",modificationtype,")", substr(motif_f[j], center+2, nchar(motif_f[j]))) 
-    print(graphtitle)
-    print(datascore)
-    print(dataipd)
-    print(datacoverage)
     
     # Mark expected nucleotide 
     motif_split <- unlist(strsplit(motif_f[j],""))
@@ -241,10 +287,10 @@ processdat <- function(motif, center, modificationtype) {
     gp_scr <- ggplotGrob(gp_scr)
     
     graphcombined <- arrangeGrob(rbind(gp_cov, gp_ipd, gp_scr), ncol=1, top=graphtitle)
+
+    memuse("- combined graphs")
     
     # Separate Graphs Below
-    print("Separate Graphs Below")
-    
     graphscore <- ggplot(datascore) + 
       geom_violin(aes(x=base, y=values,color = "blue", group=base, fill=as.factor(mod))) + 
       facet_grid(.~pos) + 
@@ -273,6 +319,15 @@ processdat <- function(motif, center, modificationtype) {
       labs(y="coverage") +
       scale_colour_manual(values=c("red"="#F8766D")) +
       prettify_base
+    
+    memuse("- separate graphs")
+
+    # garbage collection to reduce memory
+    gc()
+    memuse("- garbage collection")
+    rm(list=setdiff(ls(), c("graphcombined","graphscore","graphipd","graphcoverage",
+                            "mcount","mscore","mipd","mcov", lsf.str(), "gene","csv2")))
+    memuse("- manual garbage collection")
   
     return(list(ga = graphcombined, gs = graphscore, gi = graphipd, gc = graphcoverage, 
                 mc = mcount, ms = mscore, mi = mipd, mco = mcov))
