@@ -32,48 +32,26 @@ function(input, output, session) {
   v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols_dl))), newcols_dl)
   
   refinedat <- function(x) {
-    modnum <- gsub("[^0-9]","",x[3])
-    modletter <- ifelse(modnum=="", "x", as.numeric(modnum))
-    o_type <- paste0(modletter, substring(x[1], as.numeric(x[2])+1, as.numeric(x[2])+1))
+    methnum <- gsub("[^0-9]","",x[3])
+    modletter <- ifelse(methnum=="", "x", paste0("m",methnum))
+    o_modnum <- as.numeric(x[2]) + 1
+    o_type <- paste0(modletter, substring(x[1], o_modnum, o_modnum))
     o_fraction <- format(round(as.numeric(x[4]),2), nsmall=2)
     o_score <- round(as.numeric(x[7]))
     o_ipd <- format(round(as.numeric(x[8]),2), nsmall=2) 
     o_cov <- round(as.numeric(x[9]))
-    list(o_type, o_fraction, o_score, o_ipd, o_cov)
+    list(o_modnum, o_type, o_fraction, o_score, o_ipd, o_cov)
   }
   
   updatetable <- function() {
     source <- t(as.data.table(apply(v$df, 1, refinedat)))
-    isolate(v$df$Type <- unlist(source[,1]))
-    isolate(v$df$"% motifs detected" <- unlist(source[,2]))
-    isolate(v$df$"Mean Score" <- unlist(source[,3]))
-    isolate(v$df$"Mean IPD ratio" <- unlist(source[,4]))
-    isolate(v$df$"Mean Coverage" <- unlist(source[,5]))
+    isolate(v$df$"Modified position" <- unlist(source[,1]))
+    isolate(v$df$Type <- unlist(source[,2]))
+    isolate(v$df$"% motifs detected" <- unlist(source[,3]))
+    isolate(v$df$"Mean Score" <- unlist(source[,4]))
+    isolate(v$df$"Mean IPD ratio" <- unlist(source[,5]))
+    isolate(v$df$"Mean Coverage" <- unlist(source[,6]))
   }
-  
-  # update v$df everytime it changes
-  # observeEvent(v$df, {
-  #   # update modtype
-  #   checkmod <- function(x) {
-  #     modnum <- gsub("[^0-9]","",x[3])
-  #     modletter <- ifelse(modnum=="", "x", as.numeric(modnum))
-  #     o_type <- paste0(modletter, "m", substring(x[1], as.numeric(x[2])+1, as.numeric(x[2])+1))
-  #     o_fraction <- format(round(as.numeric(x[4]),2), nsmall=2)
-  #     o_score <- round(as.numeric(x[7]))
-  #     o_ipd <- format(round(as.numeric(x[8]),2), nsmall=2) 
-  #     o_cov <- round(as.numeric(x[9]))
-  #     list(o_type, o_fraction, o_score, o_ipd, o_cov)
-  #   }
-  #   print("TEST")
-  #   source <- t(as.data.table(apply(v$df, 1, checkmod)))
-  #   print(source)
-  #   isolate(v$df$Type <- unlist(source[,1]))
-  #   print("TEST1")
-  #   isolate(v$df$"% motifs detected" <- unlist(source[,2]))
-  #   isolate(v$df$"Mean Score" <- unlist(source[,3]))
-  #   isolate(v$df$"Mean IPD ratio" <- unlist(source[,4]))
-  #   isolate(v$df$"Mean Coverage" <- unlist(source[,5]))
-  # })
   
   # upload motiffile to motiftable
   outMotifs <- observeEvent(input$motfile, {
@@ -135,15 +113,14 @@ function(input, output, session) {
     }
     
     # check if motif already exists
-    if(motif_to_add %in% v$df$Motifs){
+    if(motif_to_add %in% v$df$Motifs && center_to_add %in% v$df[v$df$"Motifs" == motif_to_add]$"Modified position"){
       showNotification("Motif already in table.", type="error")
-    }
-    else{ # if not add to v$df
+    }else{
+      # if not add to v$df
       # assume modification occurs at specified center
-      
-      modtype <- paste0("x", toupper(substring(motif_to_add, as.numeric(center_to_add)+1, as.numeric(center_to_add)+1)))
+      modtype <- paste0("x", toupper(substring(motif_to_add, as.numeric(center_to_add), as.numeric(center_to_add))))
       rowadd <- setNames(data.table(motif_to_add, center_to_add, modtype, "", "", "", "", "", "", "No"), newcols)
-      isolate(v$df <- rbind(v$df, rowadd))
+      isolate(v$df <- rbind(v$df, rowadd))    
     }
   })
   
@@ -200,13 +177,13 @@ function(input, output, session) {
           # If changed, reupload
           if(isemptyorchanged) {
             incProgress(.2, detail = "Uploading Files")
-            uploaddat(v$modFile, v$genFile, v$motiF[j], v$centeR[j])
+            uploaddat(v$modFile, v$genFile, v$motiF[j], v$centeR[j] - 1)
             memuse("After upload dat")          
           }
           
           # Continue to process files
           incProgress(.2, detail = "Processing Files")
-          graphs <- processdat(v$motiF[j], v$centeR[j], v$modType[j])
+          graphs <- processdat(v$motiF[j], v$centeR[j] - 1, v$modType[j])
           memuse("After process dat") 
         })
         

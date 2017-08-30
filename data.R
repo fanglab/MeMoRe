@@ -65,13 +65,10 @@ processdat <- function(motif, center, modificationtype) {
   
   gag <- which(width(gene) == max(width(gene)))
   # csv2 <<- csv[csv$refName == names(gene)[gag]] #csv2 = csv
-  # memuse("- after csv2")
   
   # # R and F prep
   # csv2 <- csv2[complete.cases(csv2), ]
-  # memuse("- after csv2")
   # csv2 <- csv2[order(csv2$tpl),]
-  # memuse("- after csv2")
   param <- c(csv2$tpl[1], csv2$tpl[nrow(csv2)])  # create reverse genome
   memuse("- after param")
   genome_f <- toString(gene[[gag]])

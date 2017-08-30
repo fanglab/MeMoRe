@@ -26,7 +26,7 @@ shinyUI(fluidPage(verticalLayout(
       fileInput('motfile', 'motif_summary.csv', accept = c('.csv'))
     ),
     column(
-      4, align="center",
+      3, align="center",
       h5("Add a specific motif to table"),
       div(
         style = "display: inline-block;vertical-align:top; width: 180px;",
@@ -53,7 +53,7 @@ shinyUI(fluidPage(verticalLayout(
       actionButton("submit", "Generate plots for selected motifs", style = "color: white; background-color: #337AB7")
     ),
     column(
-      8, 
+      9, 
       uiOutput('motifs')
     )
   )),
