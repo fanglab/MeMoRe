@@ -9,6 +9,7 @@ library("gridExtra")
 library("stringi")
 library("DT")
 library("pryr")
+library("dplyr")
 
 # call functions necessary for analysis
 source("global.R", keep.source=TRUE)
@@ -19,14 +20,10 @@ oldmodFile <<- NULL
 oldgenFile <<- NULL
 
 function(input, output, session) {
-  v <- reactiveValues(modFile=NULL, 
-                      genFile=NULL, 
-                      motFile=NULL,
-                      motiF=NULL, 
-                      centeR=NULL,
-                      modType=NULL)
-  newcols = c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage","Plots Generated")
-  newcols_dl = c("Motifs","Modified position","Type")
+  v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
+
+  newcols <- c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage","Plots Generated")
+  newcols_dl <- c("Motifs","Modified position","Type")
   
   v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols))), newcols)
   v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols_dl))), newcols_dl)
@@ -52,17 +49,36 @@ function(input, output, session) {
     isolate(v$df$"Mean IPD ratio" <- unlist(source[,5]))
     isolate(v$df$"Mean Coverage" <- unlist(source[,6]))
   }
-  
+
+  read.motif.summary <- function(inFile){
+    if (!is.null(inFile)){
+      list_motif_summary_cols <- c("motifString","centerPos","modificationType","fraction","nGenome","partnerMotifString","meanScore","meanIpdRatio","meanCoverage")
+      motif_summary <- read.table(inFile$datapath, sep=",", header=TRUE) # Read motif_summary.csv file
+      motif_summary <- motif_summary[,colnames(motif_summary) %in% list_motif_summary_cols] # Select useful columns
+
+      # Add missing columns      
+      missing_columns <- setdiff(list_motif_summary_cols, names(motif_summary))
+      # TODO Error if missing "motifString","centerPos"
+      motif_summary[missing_columns] <- NA
+      motif_summary <- motif_summary[list_motif_summary_cols] # Reorder columns
+
+      motif_summary$plotted <- "No" # Add plotting status column
+      colnames(motif_summary) <- newcols # Rename columns with clean names
+
+      # Update main reactive object without re-execution
+      isolate(v$df <- rbind(v$df, motif_summary) %>% distinct(across("Motifs","Modified position"), .keep_all=TRUE))
+    }
+  }
+
   # upload motiffile to motiftable
   outMotifs <- observeEvent(input$motfile, {
-    inFile = input$motfile
-    
-    if (!is.null(inFile)){
-      d <- cbind(read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)], "Plots Generated" = "No")
-      isolate(v$df <- rbind(v$df, setnames(d, old = colnames(d), new = newcols)))
-      
-      updatetable()
-    } 
+    inFile <- input$motfile
+  
+    # Read motif_summary.csv file
+    read.motif.summary(inFile)
+
+    # Update the table in the UI
+    updatetable()
   })
   
   # render DT
