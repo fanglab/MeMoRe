@@ -1,17 +1,17 @@
-library(shiny)
-library(data.table)
-library(R.utils)
+library("shiny")
+library("data.table")
+library("R.utils")
 library("Biostrings")
-library(stringr)
-library(parallel)
-library(ggplot2)
-library(gridExtra)
-library(stringi)
-library(DT)
-library(pryr)
+library("stringr")
+library("parallel")
+library("ggplot2")
+library("gridExtra")
+library("stringi")
+library("DT")
+library("pryr")
 
 # call functions necessary for analysis
-source("data.R")
+source("global.R", keep.source=TRUE)
 
 options(shiny.maxRequestSize=1000*1024^2) 
 
