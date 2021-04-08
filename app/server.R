@@ -194,7 +194,6 @@ function(input, output, session) {
     if(any(v$motiF %in% v$dldf$Motifs)){
       showNotification("Plots for at least one of the selected motifs were already generated.", type="warning")
     }else{ # if not add to v$dldf
-      
       for(j in 1:length(input$motiftable_rows_selected)){
         # Progress Bar (most time intensive)
         print("Beginning Motif Loop")
@@ -206,8 +205,11 @@ function(input, output, session) {
           # If changed, reupload
           if(isemptyorchanged) {
             incProgress(.2, detail = "Uploading Files")
-            uploaddat(v$modFile, v$genFile, v$motiF[j], v$centeR[j] - 1)
+            results <- read.modification.file(v$modFile, v$genFile, v$motiF[j], v$centeR[j] - 1)
             memuse("After upload dat")          
+            if(results=="Not matching"){
+              break
+            }
           }
           
           # Continue to process files

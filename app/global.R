@@ -40,22 +40,33 @@ check.valid.motif <- function(motif){
   return(results)
 }
 
-uploaddat <- function(rmodfile, rgenfile, motif, center) {  
-  if (summary(file(rmodfile))$class == "gzfile") {
-    csv_temp <- gunzip(rmodfile, remove = T, temporary = T, overwrite = T)
-  } else {
-    csv_temp <- rmodfile
+read.modification.file <- function(modFile, genFile, motif, center){
+  # modFile <- "~/Desktop/Clostridium_perfringens_ATCC13124.modifications.csv.gz"
+  # genFile <- "~/Desktop/Clostridium_perfringens_ATCC13124.fasta"
+
+  # Retrieve modFile information
+  modFile_con <- file(modFile)
+  modFile_info <- summary(modFile_con)
+  close(modFile_con)
+
+  if(modFile_info$class == "gzfile"){
+    path_modification_file <- gunzip(modFile, remove = FALSE, temporary = TRUE, overwrite = TRUE)
+  }else{
+    path_modification_file <- modFile
   }
-  csv_t <- fread(csv_temp, sep = ",", header = T, verbose = F, drop = c(6, 7, 8, 11, 12, 13))  # Set csv parameters
-  memuse("- after csv_t")
-  gene <<- readDNAStringSet(rgenfile)
-  memuse("- after gene")
-  csv2 <- csv_t[csv_t$refName == names(gene)[which(width(gene) == max(width(gene)))]]
-  csv2 <- csv2[complete.cases(csv2), ]
-  csv2 <<- csv2[order(csv2$tpl),]
-  memuse("- after csv2")
-  rm(csv_t)
-  memuse("- after rm(csv_t)")
+
+  modification_file <<- fread(path_modification_file, sep=",", header=TRUE, verbose=FALSE, drop=c(6, 7, 8, 11, 12, 13), stringsAsFactors=TRUE) # Read modification file
+  memuse("- after modification_file")
+  genome <<- readDNAStringSet(genFile)
+  memuse("- after genome")
+  if(!all(levels(modification_file$refName) %in% names(genome))){
+    showNotification("At least one contig from modifications.csv(.gz) don't match the ones from genome.fasta.", type="error")
+
+    return(c("Not matching"))
+  }else{
+   
+    return(c("Matching"))
+  }
 }
 
 processdat <- function(motif, center, modificationtype) {
@@ -68,15 +79,16 @@ processdat <- function(motif, center, modificationtype) {
   cov_cut_spec <- 10
   size_spec <- 100
   
-  gag <- which(width(gene) == max(width(gene)))
-  # csv2 <<- csv[csv$refName == names(gene)[gag]] #csv2 = csv
+  gag <- which(width(genome) == max(width(genome)))
+  csv2 <- modification_file
+  # csv2 <<- csv[csv$refName == names(genome)[gag]] #csv2 = csv
   
   # # R and F prep
   # csv2 <- csv2[complete.cases(csv2), ]
   # csv2 <- csv2[order(csv2$tpl),]
   param <- c(csv2$tpl[1], csv2$tpl[nrow(csv2)])  # create reverse genome
   memuse("- after param")
-  genome_f <- toString(gene[[gag]])
+  genome_f <- toString(genome[[gag]])
   memuse("- after genome_f")
   genome_r <- chartr("GATC", "CTAG", genome_f)  # chart
   memuse("- after genome_r")
@@ -328,7 +340,7 @@ processdat <- function(motif, center, modificationtype) {
     gc()
     memuse("- garbage collection")
     rm(list=setdiff(ls(), c("graphcombined","graphscore","graphipd","graphcoverage",
-                            "mcount","mscore","mipd","mcov", lsf.str(), "gene","csv2")))
+                            "mcount","mscore","mipd","mcov", lsf.str(), "genome","csv2")))
     memuse("- manual garbage collection")
   
     return(list(ga = graphcombined, gs = graphscore, gi = graphipd, gc = graphcoverage, 
