@@ -19,105 +19,112 @@ options(shiny.maxRequestSize=1000*1024^2)
 oldmodFile <<- NULL
 oldgenFile <<- NULL
 
+# TODO clean up empty raw
+# TODO properly pass variable
+# TODO try moving function out again
 function(input, output, session) {
   v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
 
   newcols <- c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage","Plots Generated")
   newcols_dl <- c("Motifs","Modified position","Type")
   
-  v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols))), newcols)
-  v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols_dl))), newcols_dl)
-  
-  refinedat <- function(x) {
-    methnum <- gsub("[^0-9]","",x[3])
-    modletter <- ifelse(methnum=="", "x", paste0("m",methnum))
-    o_modnum <- as.numeric(x[2]) + 1
-    o_type <- paste0(modletter, substring(x[1], o_modnum, o_modnum))
-    o_fraction <- format(round(as.numeric(x[4]),2), nsmall=2)
-    o_score <- round(as.numeric(x[7]))
-    o_ipd <- format(round(as.numeric(x[8]),2), nsmall=2) 
-    o_cov <- round(as.numeric(x[9]))
-    list(o_modnum, o_type, o_fraction, o_score, o_ipd, o_cov)
-  }
-  
-  updatetable <- function() {
-    source <- t(as.data.table(apply(v$df, 1, refinedat)))
-    isolate(v$df$"Modified position" <- unlist(source[,1]))
-    isolate(v$df$Type <- unlist(source[,2]))
-    isolate(v$df$"% motifs detected" <- unlist(source[,3]))
-    isolate(v$df$"Mean Score" <- unlist(source[,4]))
-    isolate(v$df$"Mean IPD ratio" <- unlist(source[,5]))
-    isolate(v$df$"Mean Coverage" <- unlist(source[,6]))
+  initialize.motif.summary <- function(){
+    # Initialize motif summary
+    v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols))), newcols)
   }
 
+  reformat.motif.summary <- function(motif_summary){
+    motif_summary <- motif_summary %>%
+      mutate(`Modified position`=`Modified position` + 1) %>%
+      mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) %>%
+      mutate(`% motifs detected`=format(round(as.numeric(`% motifs detected`),2), nsmall=2)) %>%
+      mutate(`Mean Score`=round(as.numeric(`Mean Score`))) %>%
+      mutate(`Mean IPD ratio`=format(round(as.numeric(`Mean IPD ratio`),2), nsmall=2)) %>%
+      mutate(`Mean Coverage`=round(as.numeric(`Mean Coverage`)))
+
+    return(motif_summary)
+  }
+  
   read.motif.summary <- function(inFile){
-    if (!is.null(inFile)){
+    if(!is.null(inFile)){
       list_motif_summary_cols <- c("motifString","centerPos","modificationType","fraction","nGenome","partnerMotifString","meanScore","meanIpdRatio","meanCoverage")
       motif_summary <- read.table(inFile$datapath, sep=",", header=TRUE) # Read motif_summary.csv file
       motif_summary <- motif_summary[,colnames(motif_summary) %in% list_motif_summary_cols] # Select useful columns
 
       # Add missing columns      
       missing_columns <- setdiff(list_motif_summary_cols, names(motif_summary))
-      # TODO Error if missing "motifString","centerPos"
+      # Check that necessary columns are here
+      if(any(missing_columns %in% list_motif_summary_cols[c(1,2)])){
+        showNotification("At least one column in motifString & centerPos is missing.", type="error")
+
+        return(NULL)
+      }
       motif_summary[missing_columns] <- NA
       motif_summary <- motif_summary[list_motif_summary_cols] # Reorder columns
 
-      motif_summary$plotted <- "No" # Add plotting status column
+      # Add plotting status column
+      motif_summary$plotted <- "No"
+      motif_summary$plotted[which(motif_summary$motifString %in% v$dldf$Motifs)] <- "Yes"
+
       colnames(motif_summary) <- newcols # Rename columns with clean names
 
+      motif_summary <- reformat.motif.summary(motif_summary)
+
+      # Remove duplicate entries
+      new_motifs <- paste0(motif_summary$`Motifs`,"_",motif_summary$`Modified position`)
+      isolate(current_motifs <- paste0(v$df$`Motifs`,"_",v$df$`Modified position`))
+      motif_summary <- motif_summary[!new_motifs %in% current_motifs,]
+
       # Update main reactive object without re-execution
-      isolate(v$df <- rbind(v$df, motif_summary) %>% distinct(across("Motifs","Modified position"), .keep_all=TRUE))
+      isolate(v$df <- rbind(v$df, motif_summary))
     }
   }
 
+  initialize.motif.summary()
+  v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols_dl))), newcols_dl)
+
   # upload motiffile to motiftable
-  outMotifs <- observeEvent(input$motfile, {
+  observeEvent(input$motfile, {
     inFile <- input$motfile
   
-    # Read motif_summary.csv file
+    # Read motif_summary.csv file and populate table
     read.motif.summary(inFile)
-
-    # Update the table in the UI
-    updatetable()
   })
   
+  # clear table if motif_summary.csv not selected, else replace table with motif_summary.csv
+  observeEvent(input$cleartable, {
+    initialize.motif.summary()
+
+    inFile <- input$motfile
+
+    # Read motif_summary.csv file and populate table
+    read.motif.summary(inFile)
+  })
+  # div(DT::dataTableOutput("motiftable"), style = "font-size: 75%; width: 75%")
+
   # render DT
   output$motifs <- renderUI({
-    output$motiftable <- renderDataTable(v$df, options=list(iDisplayLength=8, bLengthChange=0))
+    output$motiftable <- renderDataTable({v$df}, options=list(iDisplayLength=8, bLengthChange=0))
     dataTableOutput('motiftable')
   })
   
   # render dl DT
   output$dl_dt <- renderUI({
-    output$dl_dt2 <- renderDataTable({v$dldf}, selection = 'single', options=list(iDisplayLength=5, bLengthChange=0, bFilter=0, bInfo=0, bAutoWidth=0))
+    output$dl_dt2 <- renderDataTable({v$dldf}, selection='single', options=list(iDisplayLength=5, bLengthChange=0, bFilter=0, bInfo=0, bAutoWidth=0))
     dataTableOutput('dl_dt2')
   })
   
-  # clear table if motif_summary.csv not selected, else replace table with motif_summary.csv
-  observeEvent(input$cleartable, {
-    inFile = input$motfile
-    if (!is.null(inFile)){
-      d <- cbind(read.table(inFile$datapath, sep = ",", header = TRUE)[c(1:4,6,8:11)], "Plots Generated" = "No", stringsAsFactors = FALSE)
-      d$"Plots Generated"[which(d$motifString %in% v$dldf$Motifs)] <- "Yes"
-      
-      
-      isolate(v$df <- setnames(d, old = colnames(d), new = newcols))
-      updatetable()
-    }else{
-      v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(newcols))), newcols)
-    }
-  })
-  
   observeEvent(input$addmotif, {
-    # Update Motiftablet
+    # Update Motiftable
     num <- as.numeric(input$center)
-    modtypnum <- as.numeric(input$modtype)
-    
+    # modtypnum <- as.numeric(input$modtype)
+
     # check that motif contains only alpha
-    if(grepl('^[A-Za-z]+$', input$motif)){
-      motif_to_add <- input$motif
+    if(check.valid.motif(input$motif)){
+      motif_to_add <- toupper(input$motif)
     }else{
       showNotification("Enter valid motif.", type="error")
+
       return(NULL)
     }
     # check that center is numeric
@@ -125,12 +132,15 @@ function(input, output, session) {
       center_to_add <- input$center
     }else{
       showNotification("Enter valid center position.", type="error")
+
       return(NULL)
     }
     
     # check if motif already exists
     if(motif_to_add %in% v$df$Motifs && center_to_add %in% v$df[v$df$"Motifs" == motif_to_add]$"Modified position"){
-      showNotification("Motif already in table.", type="error")
+      showNotification("Motif already in table.", type="warning")
+
+      return(NULL)
     }else{
       # if not add to v$df
       # assume modification occurs at specified center
@@ -144,21 +154,25 @@ function(input, output, session) {
     # modifications.csv.gz check
     if(is.null(input$modfile)){
       showNotification("Upload modifications.csv(.gz)", type="error")
+
       return(NULL)
     }
     # genome.fasta check
     if(is.null(input$genfile)){
       showNotification("Upload genome.fasta", type="error")
+
       return(NULL)
     }
     # modifications.csv.gz check
     if(is.null(input$motfile)){
       showNotification("Upload motif_summary.csv", type="error")
+
       return(NULL)
     }
     # row motif selected check
     if(is.null(input$motiftable_rows_selected)){
       showNotification("Select a motif.", type="error")
+
       return(NULL)
     }
     
@@ -178,9 +192,8 @@ function(input, output, session) {
     }
     
     if(any(v$motiF %in% v$dldf$Motifs)){
-      showNotification("Plots for one of the selected motifs were already generated.", type="error")
-    }
-    else{ # if not add to v$dldf
+      showNotification("Plots for at least one of the selected motifs were already generated.", type="warning")
+    }else{ # if not add to v$dldf
       
       for(j in 1:length(input$motiftable_rows_selected)){
         # Progress Bar (most time intensive)

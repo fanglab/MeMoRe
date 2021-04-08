@@ -34,6 +34,12 @@ memuse <- function(string) {
   print(mem_used())
 }
 
+check.valid.motif <- function(motif){
+  results <- grepl('^[ACGTRYSWKMBDHVNacgtryswkmbdhvn]+$', motif)
+
+  return(results)
+}
+
 uploaddat <- function(rmodfile, rgenfile, motif, center) {  
   if (summary(file(rmodfile))$class == "gzfile") {
     csv_temp <- gunzip(rmodfile, remove = T, temporary = T, overwrite = T)
