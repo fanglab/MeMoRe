@@ -48,7 +48,7 @@ shinyUI(fluidPage(verticalLayout(
       actionButton("addmotif", "Add motif"), 
       actionButton("cleartable", "Clear table"),
       br(),br(),
-      verbatimTextOutput("updatenom"),
+      verbatimTextOutput("list_selected_motifs"),
       br(),
       actionButton("submit", "Generate plots for selected motifs", style = "color: white; background-color: #337AB7")
     ),
