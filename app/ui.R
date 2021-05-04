@@ -1,17 +1,19 @@
 library(shiny)
 library(DT)
+library(shinydashboard)
+library(shinyjs)
 
 shinyUI(fluidPage(verticalLayout(
+  useShinyjs(),
   titlePanel("SMRTMotif Plot"),
   
   tags$head(tags$style(
     type="text/css",
-    "#combined img {max-width: auto; height: 900px;}",
-    "#score img {max-width: auto; height: 300px;}",
-    "#ipd img {max-width: auto; height: 300px;}",
-    "#coverage img {max-width: auto; height: 300px;}"
+    "[id^='combined_'] img {max-width: 100%; height: auto;}",
+    "h4 {display: inline;}",
+    "[id='download_button'] {display: inline;}"
   )),
-  
+
   wellPanel(fluidRow(
     column(
       4,
@@ -33,7 +35,7 @@ shinyUI(fluidPage(verticalLayout(
         textInput(
           inputId = "motif",
           label = "Motif",
-          value = "GATC"
+          placeholder = "GATC"
         )
       ),
       div(
@@ -41,7 +43,7 @@ shinyUI(fluidPage(verticalLayout(
         textInput(
           inputId = "center",
           label = "Modified Pos.",
-          value = "1"
+          placeholder = "1"
         )
       ),
       br(),
@@ -50,23 +52,17 @@ shinyUI(fluidPage(verticalLayout(
       br(),br(),
       verbatimTextOutput("list_selected_motifs"),
       br(),
-      actionButton("submit", "Generate plots for selected motifs", style = "color: white; background-color: #337AB7")
+      actionButton("submit", "Process selected motifs", style = "color: white; background-color: #337AB7"),
+      br(),br(),
+      actionButton("submit_all", "Process all motifs", style = "color: white; background-color: #337AB7")      
     ),
     column(
       9, 
       uiOutput('motifs')
     )
   )),
-  h4("Generated Plots"),
-  wellPanel(fluidRow(
-    column(
-      4, align="center",
-      downloadButton('dl_everything', "Download all generated plots as .zip")
-    ),
-    column(
-      8, 
-      uiOutput('dl_dt')
-    )
-  )),
-  uiOutput('images')
+
+  # div(h4("Generated Plots"), HTML('&nbsp;'), downloadButton('dl_everything', "Download all")),
+  div(h4("Generated Plots"), HTML('&nbsp;'), uiOutput("download_button")),
+  tabsetPanel(id = "render_results", type = "tabs")
 )))

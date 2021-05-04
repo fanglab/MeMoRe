@@ -1,14 +1,20 @@
+options(repos = BiocManager::repositories()) # For shinyapp.io: options(repos = BiocManager::repositories()); rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
+
 iupac_nc <<- data.frame(
   code=c("A","C","G","T","R","Y","S","W","K","M","B","D","H","V","N"),
   pattern=c("A","C","G","T","[AG]","[CT]","[CG]","[AT]","[GT]","[AC]","[CGT]","[AGT]","[ACT]","[ACG]","[ACGT]"),
   choice=c("A","C","G","T","AG","CT","CG","AT","GT","AC","CGT","ATG","ACT","ACG","ACGT")
 ) # [^] do not rev.comp easily
+# Not used
 
-# improved list of objects
-.ls.objects <- function (pos = 1, pattern, order.by,
-                        decreasing=FALSE, head=FALSE, n=5) {
-    napply <- function(names, fn) sapply(names, function(x)
-                                         fn(get(x, pos = pos)))
+list_motif_summary_cols <- c("motifString","centerPos","modificationType","fraction","nGenome","partnerMotifString","meanScore","meanIpdRatio","meanCoverage")
+list_motif_summary_clean_cols <- c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage","Plots Generated")
+list_motif_manual_clean_cols <- list_motif_summary_clean_cols[c(1,2,3)]
+
+# Improved list of objects
+.ls.objects <- function (pos = 1, pattern, order.by, decreasing=FALSE, head=FALSE, n=5){
+    napply <- function(names, fn) sapply(names, function(x) fn(get(x, pos = pos)))
+
     names <- ls(pos = pos, pattern = pattern)
     obj.class <- napply(names, function(x) as.character(class(x))[1])
     obj.mode <- napply(names, mode)
@@ -29,21 +35,216 @@ iupac_nc <<- data.frame(
     out
 }
 
-# shorthand
-lsos <- function(..., n=200) {
-    .ls.objects(..., order.by="Size", decreasing=TRUE, head=TRUE, n=n)
+# Shorthand .ls.objects
+lsos <- function(..., n=200){
+  results <- .ls.objects(..., order.by="Size", decreasing=TRUE, head=TRUE, n=n)
+
+  return(results)
 }
 
-# print mem usage
-memuse <- function(string) {
+# Print current memory usage
+memuse <- function(string){
   cat(paste0(string,"\n"))
   cat(paste0(print(mem_used()),"\n"))
+}
+
+print_db <- function(message){
+  if(debug_mode){
+    print(message)
+  }
+}
+
+initialize.motif.summary <- function(v, list_motif_summary_clean_cols){
+  # Initialize motif summary
+  v$df <- setNames(data.table(matrix(nrow = 0, ncol = length(list_motif_summary_clean_cols))), list_motif_summary_clean_cols)
+}
+
+reformat.motif.summary <- function(motif_summary){
+  motif_summary <- motif_summary %>%
+    mutate(`Modified position`=`Modified position` + 1) %>%
+    mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) %>%
+    mutate(`% motifs detected`=round(as.numeric(`% motifs detected`),2)) %>%
+    mutate(`Mean Score`=round(as.numeric(`Mean Score`))) %>%
+    mutate(`Mean IPD ratio`=round(as.numeric(`Mean IPD ratio`),2)) %>%
+    mutate(`Mean Coverage`=round(as.numeric(`Mean Coverage`)))
+
+  return(motif_summary)
+}
+
+read.motif.summary <- function(v, inFile, list_motif_summary_clean_cols, list_motif_summary_cols){
+  if(!is.null(inFile)){
+    motif_summary <- read.table(inFile$datapath, sep=",", header=TRUE) # Read motif_summary.csv file
+    motif_summary <- motif_summary[,colnames(motif_summary) %in% list_motif_summary_cols] # Select useful columns
+
+    # Add missing columns      
+    missing_columns <- setdiff(list_motif_summary_cols, names(motif_summary))
+    # Check that necessary columns are here
+    if(any(missing_columns %in% list_motif_summary_cols[c(1,2)])){
+      showNotification("At least one column in motifString & centerPos is missing.", type="error")
+
+      return(NULL)
+    }
+    motif_summary[missing_columns] <- NA
+    motif_summary <- motif_summary[list_motif_summary_cols] # Reorder columns
+
+    # Add plotting status column
+    motif_summary$plotted <- "No"
+    # motif_summary$plotted[which(motif_summary$motifString %in% v$df$Motifs)] <- "Yes"
+
+    colnames(motif_summary) <- list_motif_summary_clean_cols # Rename columns with clean names
+
+    motif_summary <- reformat.motif.summary(motif_summary)
+
+    # Remove duplicate entries
+    new_motifs <- paste0(motif_summary$`Motifs`,"_",motif_summary$`Modified position`)
+    isolate(current_motifs <- paste0(v$df$`Motifs`,"_",v$df$`Modified position`))
+    motif_summary <- motif_summary[!new_motifs %in% current_motifs,]
+
+    # Update main reactive object without re-execution
+    isolate(v$df <- rbind(v$df, motif_summary))
+  }
 }
 
 check.valid.motif <- function(motif){
   results <- grepl('^[ACGTRYSWKMBDHVNacgtryswkmbdhvn]+$', motif)
 
   return(results)
+}
+
+check.inputs  <- function(input){
+  # Check modifications.csv.gz 
+  if(!debug_mode & is.null(input$modfile)){
+    showNotification("Upload modifications.csv(.gz)", type="error")
+
+    return(NULL)
+  }
+  # Check genome.fasta
+  if(!debug_mode & is.null(input$genfile)){
+    showNotification("Upload genome.fasta", type="error")
+
+    return(NULL)
+  }
+  # Check modifications.csv.gz
+  if(!debug_mode & is.null(input$motfile)){
+    showNotification("Upload motif_summary.csv", type="error")
+
+    return(NULL)
+  }
+
+  return("OK.")
+}
+
+wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_manual_clean_cols){
+  if(is.null(check.inputs(input))){
+    # At least an input is missing
+
+    return(NULL)
+  }
+
+  # Checking selected motifs or all motifs
+  if(is.null(list_selected_motifs)){
+    showNotification("Select a motif.", type="error")
+
+    return(NULL)
+  }
+
+  # DATA INPUT
+  v$modFile <- input$modfile$datapath
+  v$genFile <- input$genfile$datapath
+  v$motFile <- input$motfile$datapath
+
+  if(debug_mode){ # TODO remove
+    v$modFile <- "Clostridium_perfringens_ATCC13124.modifications.csv.gz"
+    v$genFile <- "Clostridium_perfringens_ATCC13124.fasta"
+    v$motFile <- "Clostridium_perfringens_ATCC13124.motif_summary.csv"
+  }
+  
+  v$motiF <- NULL
+  v$centeR <- NULL
+  v$modType <- NULL
+
+  # Stop if all selected motifs were already processed
+  if(all(v$df$"Plots Generated"[list_selected_motifs]=="Yes")){
+    showNotification(paste0("Plots for all motifs were already generated."), type="warning")
+    
+    return(NULL)
+  }
+
+  for(k in 1:length(list_selected_motifs)){
+    v$motiF[k] <- toString(v$df$Motifs[list_selected_motifs[k]])
+    v$centeR[k] <- as.numeric(v$df$"Modified position"[list_selected_motifs[k]])
+    v$modType[k] <- toString(v$df$Type[list_selected_motifs[k]])
+  }
+
+  for(j in 1:length(list_selected_motifs)){
+    # Skip motifs already processed with a warning.
+    if(v$df$"Plots Generated"[list_selected_motifs[j]]=="Yes"){
+      showNotification(paste0("Plots for ",v$motiF[j]," were already generated."), type="warning")
+      next
+    }
+
+    # Progress Bar (most time intensive)
+    print_db("Start processing motif(s).")
+    memuse("After start processing motif(s).") 
+    withProgress(message = 'Processing motif(s).', value = 0, {
+      incProgress(.05, detail = "Checking motif(s).")
+      # test if uploaded genome and modifications files are changed
+      isemptyorchanged <- (is.null(oldmodFile) & is.null(oldgenFile)) || !(oldmodFile == v$modFile & oldgenFile == v$genFile)
+      
+      # If changed, reupload
+      if(isemptyorchanged) {
+        incProgress(.05, detail = "Reading input files.")
+        results <- read.modification.file(v$modFile, v$genFile)
+        memuse("After read.modification.file")          
+        if(results=="Not matching"){
+          break
+        }
+      }else{
+        incProgress(.05, detail = "Input files already loaded.")
+      }
+      
+      # Continue to process files
+      incProgress(.2, detail = paste0("Processing ",v$motiF[j]," information."))
+      if(processing_version==1){
+        graphs <- processdat(v$motiF[j], v$centeR[j] - 1, v$modType[j]) # 137s and peak mem usage at 1.2 GB
+      }else if(processing_version==2){
+        graphs <- generate.process.data(v$motiF[j], v$centeR[j], v$modType[j]) # 82s and peak mem usage at 750 MB
+      }
+      memuse("After process dat") 
+
+      incProgress(.3, detail = paste0("Save plots for ",v$motiF[j],"."))
+      
+      # GRAPHS
+      motif_detail <- paste0(v$motiF[j], "_", v$centeR[j])
+      saveRDS(graphs$ga, file=paste0(motif_detail, ".gpa"))
+      saveRDS(graphs$gs, file=paste0(motif_detail, ".gps"))
+      saveRDS(graphs$gi, file=paste0(motif_detail, ".gpi"))
+      saveRDS(graphs$gc, file=paste0(motif_detail, ".gpc"))
+      rm(graphs)
+
+      incProgress(.05, detail = paste0("Update tables with ",v$motiF[j]," information."))
+
+      isolate(v$df$"Plots Generated" <- as.character(v$df$"Plots Generated"))
+      isolate(v$df$"Plots Generated"[list_selected_motifs[j]] <- "Yes")
+      isolate(v$df$"Plots Generated" <- as.factor(v$df$"Plots Generated"))
+      
+      oldmodFile <<- v$modFile
+      oldgenFile <<- v$genFile
+
+      memuse("After assigning variables")
+
+      incProgress(.35, detail = paste0("Done."))
+    })
+  }
+
+  return("Done.")
+}
+
+print.runtime.message <- function(start_time){
+  run_time <- proc.time() - start_time
+  run_time_message <- paste0("Run time was ",round(run_time[[3]],0),"s.")
+  print_db(run_time_message)
+  showNotification(run_time_message, type="message")
 }
 
 read.modification.file <- function(modFile, genFile){
@@ -254,7 +455,9 @@ extract.motifs.signal <- function(modification_file, g_seq, mutated_motifs, iupa
     filter(coverage>=min_cov)
   
   modification_at_motifs <- merge(modification_at_motifs, mutated_motifs, by.x=c("motif"), by.y=c("mutated_motif")) %>%
-    mutate(expected_base=ifelse(mutation_type==substr(original_motif,pos_mutation,pos_mutation),1,0))
+    rowwise() %>%
+    mutate(expected_base=ifelse(mutation_type %in% as.vector(str_split(iupac_nc$choice[iupac_nc$code==substr(original_motif,pos_mutation,pos_mutation)], "", simplify=TRUE)), 1, 0))
+    # mutate(expected_base=ifelse(mutation_type==substr(original_motif,pos_mutation,pos_mutation), 1, 0))
 
   return(modification_at_motifs)
 }
@@ -293,7 +496,7 @@ generate.plots <- function(modification_at_motifs, modificationtype){
     )
   
   # Separate Graphs Below
-  gp_score <- ggplot(modification_at_motifs) + 
+  gp_score <- ggplot(subset(modification_at_motifs, select=c("mutation_type","score","expected_base","pos_mutation"))) + 
     geom_violin(aes(x=mutation_type, y=score, color="blue", group=mutation_type, fill=as.factor(expected_base))) + 
     facet_grid(.~pos_mutation) + 
     labs(title=graphtitle) +
@@ -303,7 +506,7 @@ generate.plots <- function(modification_at_motifs, modificationtype){
     scale_fill_manual(values=c("0"="white", "1"="#619CCF")) +
     prettify_base
   
-  gp_ipd <- ggplot(modification_at_motifs) + 
+  gp_ipd <- ggplot(subset(modification_at_motifs, select=c("mutation_type","ipdRatio","expected_base","pos_mutation"))) + 
     geom_violin(aes(x=mutation_type, y=ipdRatio, color="green", group=mutation_type, fill=as.factor(expected_base))) + 
     facet_grid(.~pos_mutation) + 
     labs(title=graphtitle) +
@@ -313,7 +516,7 @@ generate.plots <- function(modification_at_motifs, modificationtype){
     scale_fill_manual(values=c("0"="white", "1"="#00BA38")) +
     prettify_base
   
-  gp_cov <- ggplot(modification_at_motifs) + 
+  gp_cov <- ggplot(subset(modification_at_motifs, select=c("mutation_type","coverage","expected_base","pos_mutation"))) + 
     geom_violin(aes(x=mutation_type, y=coverage, color="red", group=mutation_type, fill=as.factor(expected_base))) + 
     facet_grid(.~pos_mutation) + 
     labs(title=graphtitle) +
@@ -328,11 +531,11 @@ generate.plots <- function(modification_at_motifs, modificationtype){
   memuse("- Separate graphs")
 
   pdf(file=NULL)
-  gp_cov <- ggplotGrob(gp_cov + prettify_top) # + labs(title=NULL)
-  gp_ipd <- ggplotGrob(gp_ipd + prettify_mid + labs(title=NULL)) # Margin too large, see rbind below
-  gp_score <- ggplotGrob(gp_score + prettify_btm + labs(title=NULL))
+  gp_ipd <- ggplotGrob(gp_ipd + prettify_top)
+  gp_score <- ggplotGrob(gp_score + prettify_mid + labs(title=NULL)) # Margin too large, see rbind below
+  gp_cov <- ggplotGrob(gp_cov + prettify_btm + labs(title=NULL))
   
-  graphcombined <- arrangeGrob(rbind(gp_cov, gp_ipd, gp_score), ncol=1) #, top=graphtitle
+  graphcombined <- arrangeGrob(rbind(gp_ipd, gp_score, gp_cov), ncol=1) #, top=graphtitle
   list_plots$ga <- graphcombined
   dev.off()
 
@@ -373,6 +576,38 @@ generate.process.data <- function(motif, center, modificationtype){
   memuse("- After generate.plots")
 
   return(list_plots)
+}
+
+render.refine.plot <- function(selected_motif){
+  renderImage({  
+    print_db(paste0("Rendering combine: ", selected_motif))      
+
+    path_graph_data <- paste0(selected_motif, ".gpa")
+    gpa <- readRDS(file=path_graph_data)
+  
+    outfile <- tempfile(fileext='.png')
+    ggsave(outfile, gpa, width=nchar(selected_motif)*2.8, height=9) # TODO remove added char
+    
+    list(src = outfile, contentType = 'image/png')
+  }, deleteFile = TRUE)
+}
+
+prepare.download <- function(input, selected_motif){
+  downloadHandler(
+    filename = function(){
+      selected_motif <- input$render_results
+
+      return(paste0(selected_motif, '_combined.pdf'))
+    },
+    content = function(file){
+      selected_motif <- input$render_results
+
+      path_graph_data <- paste0(selected_motif, ".gpa")
+      gpa <- readRDS(file=path_graph_data)
+    
+      ggsave(file, gpa, width=nchar(selected_motif)*2.8, height=8.5, device="pdf")
+    } # TODO remove added char
+  )
 }
 
 processdat <- function(motif, center, modificationtype) {
