@@ -7,9 +7,34 @@ iupac_nc <<- data.frame(
 ) # [^] do not rev.comp easily
 # Not used
 
-list_motif_summary_cols <- c("motifString","centerPos","modificationType","fraction","nGenome","partnerMotifString","meanScore","meanIpdRatio","meanCoverage")
-list_motif_summary_clean_cols <- c("Motifs","Modified position","Type","% motifs detected","# motifs in genome","Partner motif","Mean Score","Mean IPD ratio","Mean Coverage","Plots Generated")
-list_motif_manual_clean_cols <- list_motif_summary_clean_cols[c(1,2,3)]
+# list_motif_summary_SMRT_cols <<- c("motifString", "centerPos", "modificationType", "fraction", "nGenome", "partnerMotifString", "meanScore", "meanIpdRatio", "meanCoverage")
+# list_motif_summary_clean_SMRT_cols <<- c("Motifs", "Modified position", "Type", "% motifs detected", "# motifs in genome", "Partner motif", "Mean Score", "Mean IPD ratio", "Mean Coverage", "Plots Generated")
+list_motif_summary_SMRT_cols <<- c("motifString", "centerPos", "modificationType")
+list_motif_summary_clean_SMRT_cols <<- c("Motifs", "Modified position", "Type", "Plots Generated")
+list_motif_summary_ONT_cols <<- c("Motif", "Predicted_position", "Predicted_type")
+list_motif_summary_clean_ONT_cols <<- c("Motifs", "Modified position", "Type", "Plots Generated")
+list_motif_manual_clean_cols <<- list_motif_summary_clean_SMRT_cols[c(1,2,3)]
+
+load.libraries <- function(){
+  library(shiny)
+  library(data.table)
+  library(R.utils)
+  library(Biostrings)
+  library(stringr)
+  library(parallel)
+  library(ggplot2)
+  library(gridExtra)
+  library(stringi)
+  library(DT)
+  library(pryr)
+  library(dplyr)
+  library(foreach)
+  library(GenomicRanges)
+  library(doMC)
+  library(RColorBrewer)
+  library(egg)
+  library(cowplot)
+}
 
 # Improved list of objects
 .ls.objects <- function (pos = 1, pattern, order.by, decreasing=FALSE, head=FALSE, n=5){
@@ -62,18 +87,42 @@ initialize.motif.summary <- function(v, list_motif_summary_clean_cols){
 reformat.motif.summary <- function(motif_summary){
   motif_summary <- motif_summary %>%
     mutate(`Modified position`=`Modified position` + 1) %>%
-    mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) %>%
+    mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type))
+  if("% motifs detected" %in% colnames(motif_summary)){
+    motif_summary <- motif_summary %>%
     mutate(`% motifs detected`=round(as.numeric(`% motifs detected`),2)) %>%
     mutate(`Mean Score`=round(as.numeric(`Mean Score`))) %>%
     mutate(`Mean IPD ratio`=round(as.numeric(`Mean IPD ratio`),2)) %>%
     mutate(`Mean Coverage`=round(as.numeric(`Mean Coverage`)))
+  }
 
   return(motif_summary)
 }
 
-read.motif.summary <- function(v, inFile, list_motif_summary_clean_cols, list_motif_summary_cols){
+read.motif.summary <- function(v, inFile){
+ # inFile <- NULL
+ # inFile$datapath <- "app/Clostridium_perfringens_ATCC13124_nn_model.tsv"
+
   if(!is.null(inFile)){
-    motif_summary <- read.table(inFile$datapath, sep=",", header=TRUE) # Read motif_summary.csv file
+    if(grepl(inFile$datapath, pattern=".tsv$")){
+      data_type <- "ONT"
+      columns_sep <- '\t'
+      list_motif_summary_cols <- list_motif_summary_ONT_cols
+      list_motif_summary_clean_cols <- list_motif_summary_clean_ONT_cols
+    }else if(grepl(inFile$datapath, pattern=".csv$")){
+      data_type <- "SMRT"
+      columns_sep <- ','
+      list_motif_summary_cols <- list_motif_summary_SMRT_cols
+      list_motif_summary_clean_cols <- list_motif_summary_clean_SMRT_cols
+    }else{
+      showNotification("Motif summary file format not recognized.", type="warning")
+      Sys.sleep(1)
+      showNotification("SMRT Link (.csv) or Nanodisco (.tsv) output expected.", type="error")
+
+      return(NULL)
+    }
+
+    motif_summary <- read.table(inFile$datapath, sep=columns_sep, header=TRUE) # Read motif_summary.csv file
     motif_summary <- motif_summary[,colnames(motif_summary) %in% list_motif_summary_cols] # Select useful columns
 
     # Add missing columns      
@@ -93,7 +142,9 @@ read.motif.summary <- function(v, inFile, list_motif_summary_clean_cols, list_mo
 
     colnames(motif_summary) <- list_motif_summary_clean_cols # Rename columns with clean names
 
-    motif_summary <- reformat.motif.summary(motif_summary)
+    if(data_type=="SMRT"){
+      motif_summary <- reformat.motif.summary(motif_summary)
+    }
 
     # Remove duplicate entries
     new_motifs <- paste0(motif_summary$`Motifs`,"_",motif_summary$`Modified position`)
@@ -101,7 +152,7 @@ read.motif.summary <- function(v, inFile, list_motif_summary_clean_cols, list_mo
     motif_summary <- motif_summary[!new_motifs %in% current_motifs,]
 
     # Update main reactive object without re-execution
-    isolate(v$df <- rbind(v$df, motif_summary))
+    isolate(v$df <- base::rbind(v$df, motif_summary, fill=TRUE))
   }
 }
 
@@ -154,39 +205,57 @@ wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_m
   v$motFile <- input$motfile$datapath
 
   if(debug_mode){ # TODO remove
-    v$modFile <- "Clostridium_perfringens_ATCC13124.modifications.csv.gz"
+    if(is.null(rendered_motif) | is.null(v$modFile)){
+      v$modFile <- "Clostridium_perfringens_ATCC13124.modifications.csv.gz"
+      # v$modFile <- "Clostridium_perfringens_ATCC13124.RDS"
+    }
     v$genFile <- "Clostridium_perfringens_ATCC13124.fasta"
     v$motFile <- "Clostridium_perfringens_ATCC13124.motif_summary.csv"
+    # v$motFile <- "Clostridium_perfringens_ATCC13124.motif_summary.small.csv"
   }
   
   v$motiF <- NULL
   v$centeR <- NULL
   v$modType <- NULL
 
+  data_type <- find.data.type(v$modFile)
+  if(is.null(data_type)){
+    showNotification("Modification file format not recognized.", type="warning")
+    Sys.sleep(1)
+    showNotification("SMRT Link (.csv.gz or .csv) or Nanodisco (.RDS) output expected.", type="error")
+
+    return(NULL)
+  }
   # Stop if all selected motifs were already processed
-  if(all(v$df$"Plots Generated"[list_selected_motifs]=="Yes")){
+  if(all(v$df$"Plots Generated"[list_selected_motifs] %in% c("Both", data_type))){
     showNotification(paste0("Plots for all motifs were already generated."), type="warning")
     
     return(NULL)
   }
 
-  for(k in 1:length(list_selected_motifs)){
+  nb_selected_motifs <- length(list_selected_motifs)
+  for(k in 1:nb_selected_motifs){
     v$motiF[k] <- toString(v$df$Motifs[list_selected_motifs[k]])
     v$centeR[k] <- as.numeric(v$df$"Modified position"[list_selected_motifs[k]])
     v$modType[k] <- toString(v$df$Type[list_selected_motifs[k]])
   }
 
-  for(j in 1:length(list_selected_motifs)){
+  for(j in 1:nb_selected_motifs){
     # Skip motifs already processed with a warning.
-    if(v$df$"Plots Generated"[list_selected_motifs[j]]=="Yes"){
-      showNotification(paste0("Plots for ",v$motiF[j]," were already generated."), type="warning")
+    if(v$df$"Plots Generated"[list_selected_motifs[j]] %in% c("Both", data_type)){
+      showNotification(paste0("Plots for ",v$motiF[j]," was already generated."), type="warning")
       next
     }
 
     # Progress Bar (most time intensive)
     print_db("Start processing motif(s).")
-    memuse("After start processing motif(s).") 
-    withProgress(message = 'Processing motif(s).', value = 0, {
+    memuse("After start processing motif(s).")
+    if(nb_selected_motifs>1){
+      progress_message <- paste0('Processing motifs (',j,'/',nb_selected_motifs,').')
+    }else{
+      progress_message <- paste0('Processing motif.')
+    }
+    withProgress(message = progress_message, value = 0, {
       incProgress(.05, detail = "Checking motif(s).")
       # test if uploaded genome and modifications files are changed
       isemptyorchanged <- (is.null(oldmodFile) & is.null(oldgenFile)) || !(oldmodFile == v$modFile & oldgenFile == v$genFile)
@@ -204,30 +273,34 @@ wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_m
       }
       
       # Continue to process files
-      incProgress(.2, detail = paste0("Processing ",v$motiF[j]," information."))
+      # incProgress(.2, detail = paste0("Extracting ",v$motiF[j]," information."))
       if(processing_version==1){
         graphs <- processdat(v$motiF[j], v$centeR[j] - 1, v$modType[j]) # 137s and peak mem usage at 1.2 GB
-      }else if(processing_version==2){
-        graphs <- generate.process.data(v$motiF[j], v$centeR[j], v$modType[j]) # 82s and peak mem usage at 750 MB
-      }
-      memuse("After process dat") 
 
-      incProgress(.3, detail = paste0("Save plots for ",v$motiF[j],"."))
-      
-      # GRAPHS
-      motif_detail <- paste0(v$motiF[j], "_", v$centeR[j])
-      saveRDS(graphs$ga, file=paste0(motif_detail, ".gpa"))
-      saveRDS(graphs$gs, file=paste0(motif_detail, ".gps"))
-      saveRDS(graphs$gi, file=paste0(motif_detail, ".gpi"))
-      saveRDS(graphs$gc, file=paste0(motif_detail, ".gpc"))
-      rm(graphs)
+        # Save graphs
+        motif_detail <- paste0(v$motiF[j], "_", v$centeR[j])
+        saveRDS(graphs$ga, file=paste0(motif_detail, ".gpa"))
+        saveRDS(graphs$gs, file=paste0(motif_detail, ".gps"))
+        saveRDS(graphs$gi, file=paste0(motif_detail, ".gpi"))
+        saveRDS(graphs$gc, file=paste0(motif_detail, ".gpc"))
+        rm(graphs)
+      }else if(processing_version==2){
+        generate.process.data(v$motiF[j], v$centeR[j], v$modType[j], v$df) # 82s and peak mem usage at 750 MB
+      }
+      memuse("After process dat")
 
       incProgress(.05, detail = paste0("Update tables with ",v$motiF[j]," information."))
 
-      isolate(v$df$"Plots Generated" <- as.character(v$df$"Plots Generated"))
-      isolate(v$df$"Plots Generated"[list_selected_motifs[j]] <- "Yes")
-      isolate(v$df$"Plots Generated" <- as.factor(v$df$"Plots Generated"))
-      
+      isolate({
+        v$df$"Plots Generated" <- as.character(v$df$"Plots Generated")
+        if(v$df$"Plots Generated"[list_selected_motifs[j]] == "No"){
+          v$df$"Plots Generated"[list_selected_motifs[j]] <- data_type
+        }else{
+          v$df$"Plots Generated"[list_selected_motifs[j]] <- "Both"
+        }
+        v$df$"Plots Generated" <- as.factor(v$df$"Plots Generated")
+      })
+
       oldmodFile <<- v$modFile
       oldgenFile <<- v$genFile
 
@@ -247,9 +320,23 @@ print.runtime.message <- function(start_time){
   showNotification(run_time_message, type="message")
 }
 
+find.data.type <- function(path_modification_file){
+  if(grepl(path_modification_file, pattern="*.RDS$")){
+    data_type <- "ONT"
+  }else if(grepl(path_modification_file, pattern="*.csv$|*.csv.gz$|*/0.gz$|*/0$")){ # If already in tmp */0.gz$ */0$
+    data_type <- "SMRT"
+  }else{
+
+    return(NULL)
+  }
+
+  return(data_type)
+}
+
 read.modification.file <- function(modFile, genFile){
   # modFile <- "~/Desktop/Clostridium_perfringens_ATCC13124.modifications.csv.gz"
-  # genFile <- "~/Desktop/Clostridium_perfringens_ATCC13124.fasta"
+  # modFile <- "~/Softwares/SMRT-debugMotifs/app/Clostridium_perfringens_ATCC13124.RDS"
+  # genFile <- "~/Softwares/SMRT-debugMotifs/app/Clostridium_perfringens_ATCC13124.fasta"
 
   # Retrieve modFile information
   modFile_con <- file(modFile)
@@ -262,12 +349,31 @@ read.modification.file <- function(modFile, genFile){
     path_modification_file <- modFile
   }
 
-  modification_file <<- fread(path_modification_file, sep=",", header=TRUE, verbose=FALSE, drop=c(6, 7, 8, 11, 12, 13), stringsAsFactors=TRUE) # Read modification file
-  memuse("- after modification_file")
+  data_type <- find.data.type(path_modification_file)
+  if(is.null(data_type)){
+    showNotification("Modification file format not recognized.", type="warning")
+    Sys.sleep(1)
+    showNotification("SMRT Link (.csv.gz or .csv) or Nanodisco (.RDS) output expected.", type="error")
+
+    return(NULL)
+  }
+
+  if(data_type=="SMRT"){
+    modification_info <<- fread(path_modification_file, sep=",", header=TRUE, verbose=FALSE, drop=c(6, 7, 8, 11, 12, 13), stringsAsFactors=TRUE) # Read modification file
+    list_contigs <- str_split(levels(modification_info$refName), pattern=" ", simplify=TRUE)[,1]
+  }else if(data_type=="ONT"){
+    modification_info <<- readRDS(path_modification_file)
+    list_contigs <- levels(modification_info$contig)
+  }
+
+  memuse("- after modification_info")
+  
   g_seq <<- readDNAStringSet(genFile)
+  
   memuse("- after genome")
-  if(!all(levels(modification_file$refName) %in% names(g_seq))){
-    showNotification("At least one contig from modifications.csv(.gz) don't match the ones from genome.fasta.", type="error")
+
+  if(!all(list_contigs %in% str_split(names(g_seq), pattern=" ", simplify=TRUE)[,1])){
+    showNotification("At least one contig from the modification file don't match the ones from the genome.fasta.", type="error")
 
     return(c("Not matching"))
   }else{
@@ -303,6 +409,11 @@ generate.mutated.motif <- function(motifs_summary){
     return(list_mutated_motif)
   }
 
+  # Annotated expected base from queried motif
+  mutated_motifs <- mutated_motifs %>%
+    rowwise() %>%
+    mutate(expected_base=ifelse(mutation_type %in% as.vector(str_split(iupac_nc$choice[iupac_nc$code==substr(original_motif, pos_mutation, pos_mutation)], "", simplify=TRUE)), 1, 0))
+
   return(mutated_motifs)
 }
 
@@ -331,7 +442,7 @@ hide.ambiguous.matches <- function(gr_ambiguous_position, tmp_motif_matches, dir
 }
 
 find.motifs.sub <- function(mutated_motifs, idx_motif, direction, g_seq, gr_ambiguous_position){
-  original_motif <- mutated_motifs$mutated_motif[idx_motif]
+  original_motif <- mutated_motifs$motif[idx_motif]
   mod_pos <- mutated_motifs$mod_pos[idx_motif]
   len_motif <- nchar(original_motif)
 
@@ -407,19 +518,13 @@ find.motifs <- function(g_seq, mutated_motifs, iupac_nc, left_signal, right_sign
   return(pos_isolated_motifs)
 }
 
-extract.motifs.signal <- function(modification_file, g_seq, mutated_motifs, iupac_nc, left_signal, right_signal, error_margin, expected_signal_left, expected_signal_right, signal_margin, filter_iso, min_cov, nb_threads){
+extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_motifs, motifs_summary, iupac_nc, left_signal, right_signal, error_margin, expected_signal_left, expected_signal_right, signal_margin, filter_iso, min_cov, nb_threads){
 
-  # Creat GRanges of modification information
-  gr_modification <- GRanges(
-    seqnames=modification_file$refName,
-    ranges=IRanges(modification_file$tpl, modification_file$tpl),
-    strand=ifelse(modification_file$strand==0,"+","-")
-  )
-
-  memuse("- After gr_modification")
-
+  incProgress(.04, detail=paste0("Localize ",unique(mutated_motifs$original_motif)," motif sites."))
+  mutated_motifs$motif <- mutated_motifs$mutated_motif # Adapt for detection of mutated motif
   motifs <- find.motifs(g_seq, mutated_motifs, iupac_nc, left_signal, right_signal, error_margin, nb_threads, FALSE)
   expected_signal <- motifs %>%
+    mutate(contig_name=str_split(contig_name, " ", simplify=TRUE)[,1]) %>%
     mutate(left_side=contig_pos_motif+expected_signal_left-signal_margin) %>%
     mutate(right_side=contig_pos_motif+expected_signal_right+signal_margin)
   gr_signal_motifs <- GRanges(
@@ -431,41 +536,147 @@ extract.motifs.signal <- function(modification_file, g_seq, mutated_motifs, iupa
   memuse("- After find.motifs")
 
   if(filter_iso){
-    overlapping_motifs <- overlapsAny(gr_signal_motifs, type="any", drop.self=TRUE)
-    gr_signal_motifs <- gr_signal_motifs[!overlapping_motifs]
-    expected_signal <- expected_signal[!overlapping_motifs,]
+    incProgress(.04, detail=paste0("Localize background motif sites."))
+    background_motifs_summary <- subset(motifs_summary, ! Motifs %in% unique(mutated_motifs$original_motif))
+    # Adapt for detection of background motifs
+    background_motifs_summary$motif <- background_motifs_summary$Motifs
+    background_motifs_summary$mod_pos <- background_motifs_summary$'Modified position'
+    background_motifs <- find.motifs(g_seq, background_motifs_summary, iupac_nc, left_signal, right_signal, error_margin, nb_threads, FALSE)
+    expected_background_signal <- background_motifs %>%
+      mutate(contig_name=str_split(contig_name, " ", simplify=TRUE)[,1]) %>%
+      mutate(left_side=contig_pos_motif+expected_signal_left-signal_margin) %>%
+      mutate(right_side=contig_pos_motif+expected_signal_right+signal_margin)
+    gr_background_signal_motifs <- GRanges(
+      seqnames=expected_background_signal$contig_name,
+      ranges=IRanges(expected_background_signal$left_side, expected_background_signal$right_side),
+      strand=as.factor(ifelse(expected_background_signal$dir=="fwd","+","-"))
+    )
+
+    incProgress(.03, detail=paste0("Remove overlapping motif sites."))
+    overlapping_background_motifs <- findOverlaps(gr_signal_motifs, gr_background_signal_motifs, type="any", select="all")
+    if(length(overlapping_background_motifs)>0){
+      gr_signal_motifs <- gr_signal_motifs[-overlapping_background_motifs@from]
+      expected_signal <- expected_signal[-overlapping_background_motifs@from,]
+    }
+  }else{
+    incProgress(.07, detail="")
   }
 
-  overlaps_motifs_modification <- findOverlaps(gr_signal_motifs, gr_modification, type="any", select="all")
-  modification_at_motifs <- data.frame(
-    contig=expected_signal$contig_name[overlaps_motifs_modification@from],
-    pos_motif=expected_signal$contig_pos_motif[overlaps_motifs_modification@from],
-    motif=expected_signal$motif[overlaps_motifs_modification@from],
-    pos_signal=modification_file$tpl[overlaps_motifs_modification@to],
-    dir=modification_file$strand[overlaps_motifs_modification@to],
-    ipdRatio=modification_file$ipdRatio[overlaps_motifs_modification@to],
-    coverage=modification_file$coverage[overlaps_motifs_modification@to],
-    score=modification_file$score[overlaps_motifs_modification@to]
-  )
+  if(data_type=="SMRT"){
+    # Creat GRanges of modification information
+    incProgress(.04, detail=paste0("Integrate modification information."))
+    gr_modification <- GRanges(
+      seqnames=str_split(modification_info$refName, " ", simplify=TRUE)[,1],
+      ranges=IRanges(modification_info$tpl, modification_info$tpl),
+      strand=ifelse(modification_info$strand==0,"+","-")
+    )
+
+    incProgress(.03, detail=paste0("Filter modification information."))
+    overlaps_motifs_modification <- findOverlaps(gr_signal_motifs, gr_modification, type="any", select="all")
+    rm(gr_signal_motifs, gr_modification)
+    modification_at_motifs <- data.frame(
+      contig=expected_signal$contig_name[overlaps_motifs_modification@from],
+      pos_motif=expected_signal$contig_pos_motif[overlaps_motifs_modification@from],
+      motif=expected_signal$motif[overlaps_motifs_modification@from],
+      pos_signal=modification_info$tpl[overlaps_motifs_modification@to],
+      dir=modification_info$strand[overlaps_motifs_modification@to],
+      ipdRatio=modification_info$ipdRatio[overlaps_motifs_modification@to],
+      coverage=modification_info$coverage[overlaps_motifs_modification@to],
+      score=modification_info$score[overlaps_motifs_modification@to]
+    )
+    rm(expected_signal, overlaps_motifs_modification)
+
+    modification_at_motifs <- modification_at_motifs %>% 
+      mutate(distance=ifelse(dir=="fwd",pos_signal-pos_motif,(-(pos_signal-pos_motif)) - 7)) %>% # Relative distance to mod_pos with strand correction
+      filter(coverage>=min_cov)
+  }else if(data_type=="ONT"){
+    # Creat GRanges of modification information
+    incProgress(.04, detail=paste0("Integrate modification information."))
+    gr_modification <- GRanges(
+      seqnames=modification_info$contig,
+      ranges=IRanges(modification_info$position, modification_info$position),
+      strand=ifelse(modification_info$dir=="fwd","+","-")
+    )
+
+    incProgress(.03, detail=paste0("Filter modification information."))
+    overlaps_motifs_modification <- findOverlaps(gr_signal_motifs, gr_modification, type="any", select="all")
+    rm(gr_signal_motifs, gr_modification)
+    modification_at_motifs <- data.frame(
+      contig=expected_signal$contig_name[overlaps_motifs_modification@from],
+      pos_motif=expected_signal$contig_pos_motif[overlaps_motifs_modification@from],
+      motif=expected_signal$motif[overlaps_motifs_modification@from],
+      pos_signal=modification_info$position[overlaps_motifs_modification@to],
+      dir=modification_info$dir[overlaps_motifs_modification@to],
+      strand=modification_info$strand[overlaps_motifs_modification@to],
+      N_wga=modification_info$N_wga[overlaps_motifs_modification@to],
+      N_nat=modification_info$N_nat[overlaps_motifs_modification@to],
+      mean_diff=modification_info$mean_diff[overlaps_motifs_modification@to]
+    )
+    rm(expected_signal, overlaps_motifs_modification)
+
+    modification_at_motifs <- modification_at_motifs %>%
+      mutate(distance=ifelse(dir=="fwd",pos_signal-pos_motif,(-(pos_signal-pos_motif)) - 7)) %>% # Relative distance to mod_pos with strand correction
+      filter(N_wga>=min_cov & N_nat>=min_cov)
+  }
 
   memuse("- After findOverlaps")
-
-  modification_at_motifs <- modification_at_motifs %>% 
-    mutate(distance=ifelse(dir=="fwd",pos_signal-pos_motif,(-(pos_signal-pos_motif)) - 7)) %>% # Relative distance to mod_pos with strand correction
-    filter(coverage>=min_cov)
-  
-  modification_at_motifs <- merge(modification_at_motifs, mutated_motifs, by.x=c("motif"), by.y=c("mutated_motif")) %>%
-    rowwise() %>%
-    mutate(expected_base=ifelse(mutation_type %in% as.vector(str_split(iupac_nc$choice[iupac_nc$code==substr(original_motif,pos_mutation,pos_mutation)], "", simplify=TRUE)), 1, 0))
-    # mutate(expected_base=ifelse(mutation_type==substr(original_motif,pos_mutation,pos_mutation), 1, 0))
+  modification_at_motifs <- merge(modification_at_motifs, mutated_motifs, by.x=c("motif"), by.y=c("mutated_motif"))
 
   return(modification_at_motifs)
 }
 
-generate.plots <- function(modification_at_motifs, modificationtype){
+generate.process.data <- function(motif, center, modification_type, motifs_summary){
+  # motif <- "GATC"
+  # center <- 3
+  # modification_type <- "5mC"
+  # read.modification.file("app/Clostridium_perfringens_ATCC13124.RDS","app/Clostridium_perfringens_ATCC13124.fasta")
+
+  left_signal <- -1 # No overlap filtering
+  right_signal <- -1 # No overlap filtering
+  error_margin <- -1 # No overlap filtering
+
+  filter_iso <- FALSE # Remove overlapping motifs
+  min_cov <- 0 # No coverage threshold
+  nb_threads <- 2
+
+  if(c("tpl") %in% colnames(modification_info)){
+    data_type <- "SMRT"
+    expected_signal_left <- 0 # Conserve only one position
+    expected_signal_right <- 0 # Conserve only one position
+    signal_margin <- 0 # Conserve only one position
+  }else if(c("mean_diff") %in% colnames(modification_info)){
+    data_type <- "ONT"
+    expected_signal_left <- -6
+    expected_signal_right <- -1
+    signal_margin <- 4
+  }
+
+  memuse("- Start generate.process.data")
+
+  motif_to_process <- data.table(motifString=motif, centerPos=center, modificationType=modification_type)
+
+  # Generate mutated motifs
+  incProgress(.01, detail = paste0("Generating mutated motifs for ",motif,"."))
+  mutated_motifs <- generate.mutated.motif(motif_to_process)
+
+  memuse("- After generate.mutated.motif")
+
+  incProgress(.01, detail = paste0("Extracting ",motif," information."))
+  modification_at_motifs <- extract.motifs.signal(modification_info, data_type, g_seq, mutated_motifs, motifs_summary, iupac_nc, left_signal, right_signal, error_margin, expected_signal_left, expected_signal_right, signal_margin, filter_iso, min_cov, nb_threads)
+
+  memuse("- After extract.motifs.signal")
+
+  incProgress(.3, detail = paste0("Saving plot for ",motif,"."))
+  generate.plots(modification_at_motifs, data_type, modification_type, filter_iso)
+
+  memuse("- After generate.plots")
+}
+
+generate.smrt.plots <- function(modification_at_motifs, modification_type){
   motif <- unique(modification_at_motifs$original_motif)
   mod_pos <- unique(modification_at_motifs$mod_pos)
-  graphtitle <- paste0(substr(motif, 1, mod_pos),modificationtype , substr(motif, mod_pos+2, nchar(motif))) 
+  motif_detail <- paste0(motif, "_", mod_pos)
+  clean_motif <- paste0(substr(motif, 1, mod_pos-1), modification_type, substr(motif, mod_pos+1, nchar(motif))) 
 
   prettify_base <- theme(
     panel.background=element_rect(fill = NA,color="gray"), 
@@ -499,35 +710,36 @@ generate.plots <- function(modification_at_motifs, modificationtype){
   gp_score <- ggplot(subset(modification_at_motifs, select=c("mutation_type","score","expected_base","pos_mutation"))) + 
     geom_violin(aes(x=mutation_type, y=score, color="blue", group=mutation_type, fill=as.factor(expected_base))) + 
     facet_grid(.~pos_mutation) + 
-    labs(title=graphtitle) +
+    labs(title=clean_motif) +
     labs(x=paste0("Alternate base in ",motif," motif")) +
     labs(y="Score") +
     scale_colour_manual(values=c("blue"="#619CCF")) +
     scale_fill_manual(values=c("0"="white", "1"="#619CCF")) +
     prettify_base
-  
+  saveRDS(gp_score, file=paste0(motif_detail, ".gps"))
+
   gp_ipd <- ggplot(subset(modification_at_motifs, select=c("mutation_type","ipdRatio","expected_base","pos_mutation"))) + 
     geom_violin(aes(x=mutation_type, y=ipdRatio, color="green", group=mutation_type, fill=as.factor(expected_base))) + 
     facet_grid(.~pos_mutation) + 
-    labs(title=graphtitle) +
+    labs(title=clean_motif) +
     labs(x=paste0("Alternate base in ",motif," motif")) +
     labs(y="IPD ratio") +
     scale_colour_manual(values=c("green"="#00BA38")) +
     scale_fill_manual(values=c("0"="white", "1"="#00BA38")) +
     prettify_base
-  
+  saveRDS(gp_ipd, file=paste0(motif_detail, ".gpi"))
+
   gp_cov <- ggplot(subset(modification_at_motifs, select=c("mutation_type","coverage","expected_base","pos_mutation"))) + 
     geom_violin(aes(x=mutation_type, y=coverage, color="red", group=mutation_type, fill=as.factor(expected_base))) + 
     facet_grid(.~pos_mutation) + 
-    labs(title=graphtitle) +
+    labs(title=clean_motif) +
     labs(x=paste0("Alternate base in ",motif," motif")) +
     labs(y="Coverage") +
     scale_colour_manual(values=c("red"="#F8766D")) +
     scale_fill_manual(values=c("0"="white", "1"="#F8766D")) +
     prettify_base
-  
-  list_plots <- list(ga=NA, gs=gp_score, gi=gp_ipd, gc=gp_cov)
-  
+  saveRDS(gp_cov, file=paste0(motif_detail, ".gpc"))
+
   memuse("- Separate graphs")
 
   pdf(file=NULL)
@@ -535,82 +747,97 @@ generate.plots <- function(modification_at_motifs, modificationtype){
   gp_score <- ggplotGrob(gp_score + prettify_mid + labs(title=NULL)) # Margin too large, see rbind below
   gp_cov <- ggplotGrob(gp_cov + prettify_btm + labs(title=NULL))
   
-  graphcombined <- arrangeGrob(rbind(gp_ipd, gp_score, gp_cov), ncol=1) #, top=graphtitle
-  list_plots$ga <- graphcombined
+  gp_all <- arrangeGrob(rbind(gp_ipd, gp_score, gp_cov), ncol=1) #, top=clean_motif
+  saveRDS(gp_all, file=paste0(motif_detail, ".gpa"))
   dev.off()
 
-  memuse("- Sombined graphs")
-
-  return(list_plots) # , mc=mcount, ms=mscore, mi=mipd, mco=mcov
+  memuse("- Combined graphs")
 }
 
-generate.process.data <- function(motif, center, modificationtype){
- # motif <- "GATC"
- # center <- 2
- # modificationtype <- "6mA"
- left_signal <- -1 # No overlap filtering
- right_signal <- -1 # No overlap filtering
- error_margin <- -1 # No overlap filtering
- expected_signal_left <- 0 # Conserve only one position
- expected_signal_right <- 0 # Conserve only one position
- signal_margin <- 0 # Conserve only one position
- filter_iso <- FALSE # Remove overlapping motifs
- min_cov <- 0 # No coverage threshold
- nb_threads <- 1
+score.mutated.motifs <- function(modification_at_motifs){
+  mutated_motif_score <- modification_at_motifs %>% # TODO try to improve summary function
+    group_by(mutation_type, pos_mutation, distance) %>%
+    summarize(score2=abs(mean(mean_diff, na.rm=TRUE)), .groups="drop_last") %>%
+    group_by(mutation_type, pos_mutation) %>%
+    summarize(score=sum(score2), .groups="drop_last")
+  mutated_motif_score$mutation_type <- ordered(mutated_motif_score$mutation_type, levels=c("T","G","C","A")) # Same order as facet_grid
 
-  memuse("- Start generate.process.data")
-
-  motifs_summary <- data.table(motifString=motif, centerPos=center, modificationType=modificationtype)
-
-  # Generate mutated motifs
-  mutated_motifs <- generate.mutated.motif(motifs_summary)
-  
-  memuse("- After generate.mutated.motif")
-
-  modification_at_motifs <- extract.motifs.signal(modification_file, g_seq, mutated_motifs, iupac_nc, left_signal, right_signal, error_margin, expected_signal_left, expected_signal_right, signal_margin, filter_iso, min_cov, nb_threads)
-
-  memuse("- After extract.motifs.signal")
-
-  list_plots <- generate.plots(modification_at_motifs, modificationtype)
-
-  memuse("- After generate.plots")
-
-  return(list_plots)
+  return(mutated_motif_score)
 }
 
-render.refine.plot <- function(selected_motif){
-  renderImage({  
-    print_db(paste0("Rendering combine: ", selected_motif))      
+generate.ont.plots <- function(modification_at_motifs, modification_type, filter_iso){
+  xmin_value <- -7.5
+  xmax_value <- 6.5
 
-    path_graph_data <- paste0(selected_motif, ".gpa")
-    gpa <- readRDS(file=path_graph_data)
-  
-    outfile <- tempfile(fileext='.png')
-    ggsave(outfile, gpa, width=nchar(selected_motif)*2.8, height=9) # TODO remove added char
-    
-    list(src = outfile, contentType = 'image/png')
-  }, deleteFile = TRUE)
+  motif <- unique(modification_at_motifs$original_motif)
+  mod_pos <- unique(modification_at_motifs$mod_pos)
+  motif_detail <- paste0(motif, "_", mod_pos)
+  clean_motif <- paste0(substr(motif, 1, mod_pos-1), modification_type, substr(motif, mod_pos+1, nchar(motif))) 
+
+  modification_at_motifs <- subset(modification_at_motifs, select=c("mutation_type", "pos_mutation", "distance", "mean_diff"), !is.na(mean_diff)) %>%
+    mutate(distance=distance + 3)
+
+  if(nrow(modification_at_motifs)>15){ # If motif found and more than 15 data point left TODO arbitrary threshold
+    # Compute mutated motif scores
+    mutated_motif_score <- score.mutated.motifs(modification_at_motifs)
+
+    # Plot mutated motif signal
+    myPalette <- colorRampPalette(rev(brewer.pal(11, "Spectral")))
+    ymin_value <- max(-10,min(modification_at_motifs$mean_diff))
+    ymax_value <- min(10,max(modification_at_motifs$mean_diff))
+    gp_detail <- ggplot(modification_at_motifs) + # modification_at_motifs[sample(nrow(modification_at_motifs), 100000), ]
+      geom_rect(data=mutated_motif_score, aes(xmin=xmin_value, xmax=xmax_value, ymin=ymin_value, ymax=ymin_value + 2, fill=score)) +
+      geom_jitter(aes(x=distance, y=mean_diff), pch=46, height=0) +
+      geom_violin(aes(x=distance, y=mean_diff, group=distance), alpha=0.6) + # Throw warning if < one motif per strand|dir
+      geom_hline(yintercept=0, col="red") +
+      facet_grid(mutation_type~pos_mutation) +
+      scale_fill_gradientn(colours=myPalette(100), guide=FALSE) +
+      labs(title=paste0("Refinement plot for ",clean_motif," motifs")) +
+      labs(y="Mean current differences (pA)") +
+      coord_cartesian(xlim=c(xmin_value+0.5, xmax_value-0.5), ylim=c(ymin_value, ymax_value), expand=FALSE) +
+      theme_bw()
+
+    if(filter_iso){
+      gp_detail <- gp_detail + labs(x=paste0("Distance from modified base at isolated ",clean_motif," motifs"))
+    }else{
+      gp_detail <- gp_detail + labs(x=paste0("Distance from modified base at ",clean_motif," motifs"))
+    }
+    # saveRDS(gp_detail, file=paste0(motif_detail, ".gpa"))
+
+    # Plot mutated motif scores
+    gp_score <- ggplot(mutated_motif_score) +
+      geom_tile(aes(x=pos_mutation, y=mutation_type, fill=score)) +
+      geom_text(aes(x=pos_mutation, y=mutation_type, label=mutation_type)) +
+      scale_fill_gradientn(colours=myPalette(100)) +
+      # labs(title=paste0(clean_motif," motif scores")) +
+      labs(x="Mutated position", y="Mutated base", fill="Score") +
+      coord_cartesian(expand=FALSE) +
+      theme_bw() +
+      theme(axis.text.y=element_blank(), axis.ticks.y=element_blank()) +
+      theme(legend.position="right", legend.direction="horizontal") +
+      guides(fill=guide_colourbar(title.vjust=0.5, title.position="top"))
+    # saveRDS(gp_score, file=paste0(motif_detail, ".gps"))
+    gp_empty <- ggplot() +
+      geom_blank() +
+      theme_bw() +
+      theme(panel.border=element_blank())
+
+    pdf(file=NULL) # Avoid opening empty window
+    gp_combine <- ggarrange(gp_detail, ggdraw(ggarrange(gp_score, gp_empty, ncol=2, widths=c(1,2))), ncol=1, heights=c(5,1.4))
+    dev.off()
+    saveRDS(gp_combine, file=paste0(motif_detail, ".gpo"))
+  }
 }
 
-prepare.download <- function(input, selected_motif){
-  downloadHandler(
-    filename = function(){
-      selected_motif <- input$render_results
-
-      return(paste0(selected_motif, '_combined.pdf'))
-    },
-    content = function(file){
-      selected_motif <- input$render_results
-
-      path_graph_data <- paste0(selected_motif, ".gpa")
-      gpa <- readRDS(file=path_graph_data)
-    
-      ggsave(file, gpa, width=nchar(selected_motif)*2.8, height=8.5, device="pdf")
-    } # TODO remove added char
-  )
+generate.plots <- function(modification_at_motifs, data_type, modification_type, filter_iso){
+  if(data_type=="ONT"){
+    generate.ont.plots(modification_at_motifs, modification_type, filter_iso)
+  }else if(data_type=="SMRT"){
+    generate.smrt.plots(modification_at_motifs, modification_type)
+  }
 }
 
-processdat <- function(motif, center, modificationtype) {
+processdat <- function(motif, center, modificationtype){
  # motif <- "VGACAT"
  # center <- "2"
  # modificationtype <- "6mA"
@@ -625,7 +852,7 @@ processdat <- function(motif, center, modificationtype) {
   size_spec <- 100
   
   gag <- which(width(g_seq) == max(width(g_seq)))
-  csv2 <- modification_file
+  csv2 <- modification_info
   # csv2 <<- csv[csv$refName == names(genome)[gag]] #csv2 = csv
 
   # # R and F prep
@@ -891,3 +1118,37 @@ processdat <- function(motif, center, modificationtype) {
     return(list(ga = graphcombined, gs = gp_scr, gi = gp_ipd, gc = gp_cov)) # , mc = mcount, ms = mscore, mi = mipd, mco = mcov
   }
 }
+
+# Not used
+render.refine.plot <- function(selected_motif){
+  renderImage({  
+    print_db(paste0("Rendering combine: ", selected_motif))      
+
+    path_graph_data <- paste0(selected_motif, ".gpa")
+    gpa <- readRDS(file=path_graph_data)
+  
+    outfile <- tempfile(fileext='.png')
+    ggsave(outfile, gpa, width=nchar(selected_motif)*2.8, height=9) # TODO remove added char
+    
+    list(src = outfile, contentType = 'image/png')
+  }, deleteFile = TRUE)
+}
+
+prepare.download <- function(input, selected_motif){
+  downloadHandler(
+    filename = function(){
+      selected_motif <- input$render_results
+
+      return(paste0(selected_motif, '_combined.pdf'))
+    },
+    content = function(file){
+      selected_motif <- input$render_results
+
+      path_graph_data <- paste0(selected_motif, ".gpa")
+      gpa <- readRDS(file=path_graph_data)
+    
+      ggsave(file, gpa, width=nchar(selected_motif)*2.8, height=8.5, device="pdf")
+    } # TODO remove added char
+  )
+}
+

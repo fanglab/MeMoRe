@@ -1,49 +1,38 @@
-library(shiny)
-library(data.table)
-library(R.utils)
-library(Biostrings)
-library(stringr)
-library(parallel)
-library(ggplot2)
-library(gridExtra)
-library(stringi)
-library(DT)
-library(pryr)
-library(dplyr)
-library(foreach)
-library(GenomicRanges)
-library(doMC)
+# shiny::runApp('./app', host = '0.0.0.0', port = 3838)
+# /Users/touraa01/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot2.png
 
 # call functions necessary for analysis
 source("global.R", keep.source=TRUE)
 
 options(shiny.maxRequestSize=1000*1024^2) 
 
-# TODO include ONT
-# TODO plot type in table
-# TODO add tabs colors
-# TODO change motif name in tab + code to full name
+load.libraries()
+
+# TODO dynamic nb threads
 function(input, output, session) {
   v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
 
-  debug_mode <<- TRUE
+  debug_mode <<- FALSE
   processing_version <<- 2
 
   rendered_motif <<- NULL
   loaded_motif <<- NULL
+  downloadable_motif <<- NULL
   downloadable <- reactiveValues(status=FALSE)
+  process_all <<- 0
 
   oldmodFile <<- NULL
   oldgenFile <<- NULL
 
-  initialize.motif.summary(v, list_motif_summary_clean_cols)
+  initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
   # v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(list_motif_manual_clean_cols))), list_motif_manual_clean_cols)
 
   if(debug_mode){
-    intiale <- reactiveValues(datapath=NULL)
-    intiale$datapath <- "Clostridium_perfringens_ATCC13124.motif_summary.csv"
-    observeEvent(intiale$datapath, {
-      read.motif.summary(v, intiale, list_motif_summary_clean_cols, list_motif_summary_cols)
+    initial <- reactiveValues(datapath=NULL)
+    initial$datapath <- "Clostridium_perfringens_ATCC13124.motif_summary.csv"
+    # initial$datapath <- "Clostridium_perfringens_ATCC13124.motif_summary.small.csv"
+    observeEvent(initial$datapath, {
+      read.motif.summary(v, initial)
     })
   }
 
@@ -52,22 +41,22 @@ function(input, output, session) {
     inFile <- input$motfile
   
     # Read motif_summary.csv file and populate table
-    read.motif.summary(v, inFile, list_motif_summary_clean_cols, list_motif_summary_cols)
+    read.motif.summary(v, inFile)
   }) # End observe motfile
 
   # Clear table if no motif_summary.csv input, or reload from motif_summary.csv
   observeEvent(input$cleartable, {
-    initialize.motif.summary(v, list_motif_summary_clean_cols, list_motif_summary_cols)
+    initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
 
     inFile <- input$motfile
 
     # Read motif_summary.csv file and populate table
-    read.motif.summary(v, inFile, list_motif_summary_clean_cols)
+    read.motif.summary(v, inFile)
   }) # End observe cleartable
 
   # Render motif summary table
   output$motifs <- renderUI({
-    output$motiftable <- renderDataTable({v$df}, options=list(iDisplayLength=8, bLengthChange=0))
+    output$motiftable <- renderDataTable({v$df}, options=list(iDisplayLength=8, bLengthChange=0, pageLength=8, dom='tip'))
     dataTableOutput('motiftable')
   })
 
@@ -102,13 +91,14 @@ function(input, output, session) {
       # if not add to v$df
       # assume modification occurs at specified center
       modtype <- paste0("x", toupper(substring(motif_to_add, as.numeric(center_to_add), as.numeric(center_to_add))))
-      rowadd <- setNames(data.table(motif_to_add, center_to_add, modtype, "", "", "", "", "", "", "No"), list_motif_summary_clean_cols)
+      # rowadd <- setNames(data.table(motif_to_add, center_to_add, modtype, "", "", "", "", "", "", "No"), list_motif_summary_clean_SMRT_cols)
+      rowadd <- setNames(data.table(motif_to_add, center_to_add, modtype, "No"), list_motif_summary_clean_SMRT_cols)
       isolate(v$df <- rbind(v$df, rowadd))    
     }
   }) # End observe addmotif
   
   # Submit all motif to processing function
-  observeEvent(input$submit_all, {
+  observeEvent(input$submit_all, {    
     start_time <- proc.time()
 
     results <- wrapper.data.processing(input, v, input$motiftable_rows_all, list_motif_manual_clean_cols)
@@ -139,7 +129,7 @@ function(input, output, session) {
 
   # Populate new tab and render new plots
   observeEvent(v$df, {
-    processed_motifs <- v$df[v$df$"Plots Generated"=="Yes",]
+    processed_motifs <- v$df[v$df$"Plots Generated"!="No",]
     nb_processed_motifs <- nrow(processed_motifs)
 
     if(nb_processed_motifs==0){
@@ -152,32 +142,54 @@ function(input, output, session) {
         print_db(idx_processed_motifs)
         print_db(rendered_motif)
         current_motif <- processed_motifs$"Motifs"[idx_processed_motifs]
-        current_modpos <- processed_motifs$"Modified position"[idx_processed_motifs]
-        current_motif_detail <- paste0(current_motif,"_",current_modpos)
+        current_mod_pos <- processed_motifs$"Modified position"[idx_processed_motifs]
+        current_mod_type <- processed_motifs$"Type"[idx_processed_motifs]
+        current_data_type <- processed_motifs$"Plots Generated"[idx_processed_motifs]
+        current_motif_detail <- paste0(current_motif,"_",current_mod_pos)
         print_db(current_motif_detail)
+
+        current_motif_clean <- paste0(substr(current_motif, 1, current_mod_pos-1),current_mod_type,substr(current_motif, current_mod_pos+1, nchar(current_motif)))
+
+        if(current_data_type=="Both"){
+          current_data_type <- c("ONT","SMRT")
+        }
 
         first_render <- FALSE
         to_render <- FALSE
         if(is.null(rendered_motif)){ # Create tabsetPanel
           print_db(paste0("First render"))
-          rendered_motif <<- current_motif_detail
           downloadable$status <- TRUE
           first_render <- TRUE
           to_render <- TRUE
-        }else if(current_motif_detail %in% rendered_motif){
-          # Motif already rendered
+        }else if(all(paste0(current_motif_detail,"_",current_data_type) %in% rendered_motif)){
+          # All motifs already rendered
           print_db(paste0("Already render"))
         }else{
           print_db(paste0("New render"))
-          rendered_motif <<- c(rendered_motif, current_motif_detail)
           to_render <- TRUE
         }
         if(to_render){
-          appendTab(
-            inputId = "render_results",
-            tab = tabPanel(title=current_motif_detail, value=current_motif_detail, downloadButton(paste0('dl_',current_motif_detail)), br(), imageOutput(paste0('combined_',current_motif_detail)), style="overflow-y:scroll;"),
-            select = first_render
-          )
+          for(selected_data_type in current_data_type){
+            # Only render if not already done 
+            if(!paste0(current_motif_detail,"_",selected_data_type) %in% rendered_motif){
+              appendTab(
+                inputId="render_results",
+                tab=tabPanel(title=current_motif_clean, value=paste0(current_motif_detail,'_',selected_data_type),
+                  downloadButton(paste0('dl_',current_motif_detail,'_',selected_data_type), label="", style='padding:4px; font-size:80%; margin-bottom:0.4em'),
+                  br(),
+                  imageOutput(paste0('combined_',current_motif_detail,'_',selected_data_type)),
+                  style="overflow-y: visible;"
+                ),
+                select=first_render
+              )
+
+              if(is.null(rendered_motif)){
+                rendered_motif <<- paste0(current_motif_detail,"_",selected_data_type)
+              }else{
+                rendered_motif <<- c(rendered_motif, paste0(current_motif_detail,"_",selected_data_type))
+              }
+            }
+          }
         }
         print_db(paste0(current_motif_detail," is done."))
       }
@@ -192,12 +204,26 @@ function(input, output, session) {
       output[[paste0('combined_',selected_motif)]] <- renderImage({  
         print_db(paste0("Rendering combine: ", selected_motif))      
 
-        path_graph_data <- paste0(selected_motif, ".gpa")
-        gpa <- readRDS(file=path_graph_data)
-      
-        outfile <- tempfile(fileext='.png')
-        ggsave(outfile, gpa, width=nchar(selected_motif)*2.8, height=9) # TODO remove added char
-        
+        selected_motif_info <- str_split(selected_motif, pattern="_", simplify=TRUE)
+        clean_selected_motif <- paste0(selected_motif_info[,c(1,2)], collapse="_")
+        if(selected_motif_info[,3]=="SMRT"){
+          path_graph_data <- paste0(clean_selected_motif, ".gpa")
+        }else{
+          path_graph_data <- paste0(clean_selected_motif, ".gpo")
+        }
+
+        withProgress(message=paste0("Rendering ",selected_motif_info[,1],"."), value=0, {
+          incProgress(.05, detail="Read ggplot data.")
+          # Read ggplot data
+          gp <- readRDS(file=path_graph_data)
+
+          incProgress(.5, detail="Create png file.")
+          outfile <- tempfile(fileext='.png')
+          ggsave(outfile, gp, width=nchar(str_split(clean_selected_motif, pattern="_", simplify=TRUE)[,1])*2.8, height=9) # TODO remove added char
+
+          incProgress(.45, detail="Done.")
+        })
+
         list(src = outfile, contentType = 'image/png')
       }, deleteFile = TRUE)
 
@@ -217,10 +243,16 @@ function(input, output, session) {
       content = function(file){
         selected_motif <- input$render_results
 
-        path_graph_data <- paste0(selected_motif, ".gpa")
-        gpa <- readRDS(file=path_graph_data)
-      
-        ggsave(file, gpa, width=nchar(selected_motif)*2.8, height=9, device="pdf")
+        clean_selected_motif <- paste0(str_split(selected_motif, pattern="_", simplify=TRUE)[,c(1,2)], collapse="_")
+        path_graph_data <- paste0(clean_selected_motif, ".gpa")
+        if(file.exists(path_graph_data)){
+          gp <- readRDS(file=path_graph_data)
+        }else{
+          path_graph_data <- paste0(clean_selected_motif, ".gpo")
+          gp <- readRDS(file=path_graph_data)
+        }
+
+        ggsave(file, gp, width=nchar(str_split(clean_selected_motif, pattern="_", simplify=TRUE)[,1])*2.8, height=9, device="pdf")
       } # TODO remove added char
     )
   })
@@ -235,8 +267,41 @@ function(input, output, session) {
 
   output$download_button <- renderUI({
     if(downloadable$status){
-      downloadButton("dl_everything", "Download all")
+      downloadButton("dl_everything", "All", style='padding:4px; font-size:80%; margin-bottom:0.4em')
     }
+  })
+
+  observeEvent(input$input_toggle, {
+    if(((input$input_toggle + process_all) %% 2) == 0){
+      updateActionButton(session, "input_toggle", label="Hide")
+      shinyjs::show(id="input_subpanel")
+    }else{
+      updateActionButton(session, "input_toggle", label="Show")
+      shinyjs::hide(id="input_subpanel")
+    }
+  })
+
+  observeEvent(input$motif_toggle, {
+    if(((input$motif_toggle + process_all) %% 2) == 0){
+      updateActionButton(session, "motif_toggle", label="Hide")
+      shinyjs::show(id="motif_subpanel")
+      shinyjs::runjs("$('#motiftable table.dataTable[id]').DataTable().draw();")
+    }else{
+      updateActionButton(session, "motif_toggle", label="Show")
+      shinyjs::hide(id="motif_subpanel")
+    }
+  })
+
+  observeEvent(input$submit_all, {
+    process_all <<- 1 # Keep track of actionButton status
+
+    # Hide inputs
+    updateActionButton(session, "input_toggle", label="Show")
+    shinyjs::hide(id="input_subpanel")
+
+    # Hide motif summary
+    updateActionButton(session, "motif_toggle", label="Show")
+    shinyjs::hide(id="motif_subpanel")
   })
 
   # Generate .zip file with graphs from all processed motifs 
@@ -250,7 +315,7 @@ function(input, output, session) {
       on.exit(setwd(dir=owd)) # Maybe not needed
       list_graph_files <- NULL
       
-      processed_motifs <- v$df[v$df$"Plots Generated"=="Yes",]      
+      processed_motifs <- v$df[v$df$"Plots Generated"!="No",]      
       if(nrow(processed_motifs)==0){
         showNotification(paste0("No motifs were processed."), type="warning")
 
@@ -269,23 +334,35 @@ function(input, output, session) {
           graph_height_single <- 3
           graph_height_combined <- 8.5
 
-          gpa_f <- paste0(current_motif_detail, '_combined.pdf')
-          gp <- readRDS(file=paste0(path_graph_data, ".gpa"))
-          ggsave(filename=gpa_f, plot=gp, width=graph_width, height=graph_height_combined, limitsize=FALSE, device="pdf")
+          # ONT plot
+          if(file.exists(paste0(path_graph_data, ".gpo"))){
+            gpo_f <- paste0(current_motif_detail, '_ont.pdf')
+            gp <- readRDS(file=paste0(path_graph_data, ".gpo"))
+            ggsave(filename=gpo_f, plot=gp, width=graph_width, height=graph_height_combined, limitsize=FALSE, device="pdf")
 
-          gps_f <- paste0(current_motif_detail, '_score.pdf')
-          gp <- readRDS(file=paste0(path_graph_data, ".gps"))
-          ggsave(filename=gps_f, plot=gp, width=graph_width, height=graph_height_single, limitsize=FALSE, device="pdf")
+            list_graph_files <- c(list_graph_files, gpo_f)
+          }
 
-          gpi_f <- paste0(current_motif_detail, '_ipdRatio.pdf')
-          gp <- readRDS(file=paste0(path_graph_data, ".gpi"))
-          ggsave(filename=gpi_f, plot=gp, width=graph_width, height=graph_height_single, limitsize=FALSE, device="pdf")
+          # SMRT plots
+          if(file.exists(paste0(path_graph_data, ".gpa"))){
+            gpa_f <- paste0(current_motif_detail, '_combined.pdf')
+            gp <- readRDS(file=paste0(path_graph_data, ".gpa"))
+            ggsave(filename=gpa_f, plot=gp, width=graph_width, height=graph_height_combined, limitsize=FALSE, device="pdf")
 
-          gpc_f <- paste0(current_motif_detail, '_coverage.pdf')
-          gp <- readRDS(file=paste0(path_graph_data, ".gpc"))
-          ggsave(filename=gpc_f, plot=gp, width=graph_width, height=graph_height_single, limitsize=FALSE, device="pdf")
+            gps_f <- paste0(current_motif_detail, '_score.pdf')
+            gp <- readRDS(file=paste0(path_graph_data, ".gps"))
+            ggsave(filename=gps_f, plot=gp, width=graph_width, height=graph_height_single, limitsize=FALSE, device="pdf")
 
-          list_graph_files <- c(list_graph_files, gpa_f, gps_f, gpi_f, gpc_f)
+            gpi_f <- paste0(current_motif_detail, '_ipdRatio.pdf')
+            gp <- readRDS(file=paste0(path_graph_data, ".gpi"))
+            ggsave(filename=gpi_f, plot=gp, width=graph_width, height=graph_height_single, limitsize=FALSE, device="pdf")
+
+            gpc_f <- paste0(current_motif_detail, '_coverage.pdf')
+            gp <- readRDS(file=paste0(path_graph_data, ".gpc"))
+            ggsave(filename=gpc_f, plot=gp, width=graph_width, height=graph_height_single, limitsize=FALSE, device="pdf")
+
+            list_graph_files <- c(list_graph_files, gpa_f, gps_f, gpi_f, gpc_f)
+          }
           
           incProgress((1)/length(processed_motifs), detail=paste("Downloading Plots for Motif", idx_processed_motifs))
         }
