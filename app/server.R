@@ -9,6 +9,7 @@ options(shiny.maxRequestSize=1000*1024^2)
 load.libraries()
 
 # TODO dynamic nb threads
+# TODO add example data
 function(input, output, session) {
   v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
 
@@ -62,8 +63,7 @@ function(input, output, session) {
 
   observeEvent(input$addmotif, {
     # Update Motiftable
-    num <- as.numeric(input$center)
-    # modtypnum <- as.numeric(input$modtype)
+    mod_pos <- as.integer(input$center)
 
     # check that motif contains only alpha
     if(check.valid.motif(input$motif)){
@@ -74,8 +74,8 @@ function(input, output, session) {
       return(NULL)
     }
     # check that center is numeric
-    if(!is.na(num) & num > 0 & num <= nchar(input$motif)){
-      center_to_add <- input$center
+    if(!is.na(mod_pos) & mod_pos > 0 & mod_pos <= nchar(input$motif)){
+      center_to_add <- mod_pos
     }else{
       showNotification("Enter valid center position.", type="error")
 
