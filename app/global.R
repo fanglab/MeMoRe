@@ -99,9 +99,6 @@ reformat.motif.summary <- function(motif_summary){
 }
 
 read.motif.summary <- function(v, inFile){
- # inFile <- NULL
- # inFile$datapath <- "app/Clostridium_perfringens_ATCC13124_nn_model.tsv"
-
   if(!is.null(inFile)){
     if(grepl(inFile$datapath, pattern=".tsv$")){
       data_type <- "ONT"

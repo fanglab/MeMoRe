@@ -24,47 +24,13 @@ shinyUI(fluidPage(verticalLayout(
       actionButton("input_toggle", label="Hide", style='padding:4px; font-size:80%; margin-bottom:0.4em'), style='margin-top:-0em; margin-bottom:-0.2em'
     ),
 
-    # fluidRow(
-    #   id="input_subpanel",
-    #   column(
-    #     4,
-    #     fileInput('modfile', 'Modifications info. (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
-    #     fluidRow(
-    #       id="input_testing",
-    #       column(
-    #         6,
-    #         div(style="text-align:center;", actionButton("ont_button", label="Test ONT data", style="font-size:80%")),
-    #         style='padding-bottom:0px; margin-top:-1em; margin-bottom:1.5em'
-    #       ),
-    #       column(
-    #         6,
-    #         div(style="text-align:center;", actionButton("smrt_button", label="Test SMRT data", style="font-size:80%")),
-    #         style='padding-bottom:0px; margin-top:-1em; margin-bottom:1.5em'
-    #       ),
-    #       style="margin-bottom:0em"
-    #     ),
-    #     style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
-    #   ),
-    #   column(
-    #     4,
-    #     fileInput('genfile', 'Genome (.fa, .fasta)', accept=c('.fa', '.fasta')),
-    #     style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
-    #   ),
-    #   column(
-    #     4,
-    #     fileInput('motfile', 'Motif summary (.csv, .tsv)', accept=c('.csv', '.tsv')),
-    #     style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
-    #   ),
-    #   style="margin-bottom:1.2em"
-    # ),
-
     fluidRow(
       id="input_subpanel",
       column(
         10,
         column(
           4,
-          fileInput('modfile', 'Modifications info. (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
+          fileInput('modfile', 'Modifications (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
           style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
         ),
         column(

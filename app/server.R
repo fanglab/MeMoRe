@@ -78,7 +78,7 @@ function(input, output, session) {
 
     # Read motif_summary.csv file and populate table
     read.motif.summary(v, inFile)
-  }) # End observe cleartable
+  })
 
   # Render motif summary table
   output$motifs <- renderUI({
