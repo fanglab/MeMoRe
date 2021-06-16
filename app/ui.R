@@ -21,27 +21,71 @@ shinyUI(fluidPage(verticalLayout(
 
     div(
       h4("Inputs"),
-      actionButton("input_toggle", label="Hide", style='padding:4px; font-size:80%; margin-bottom:0.4em'), style='margin-top:-0em; margin-bottom:-0.6em'
+      actionButton("input_toggle", label="Hide", style='padding:4px; font-size:80%; margin-bottom:0.4em'), style='margin-top:-0em; margin-bottom:-0.2em'
     ),
-      
+
+    # fluidRow(
+    #   id="input_subpanel",
+    #   column(
+    #     4,
+    #     fileInput('modfile', 'Modifications info. (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
+    #     fluidRow(
+    #       id="input_testing",
+    #       column(
+    #         6,
+    #         div(style="text-align:center;", actionButton("ont_button", label="Test ONT data", style="font-size:80%")),
+    #         style='padding-bottom:0px; margin-top:-1em; margin-bottom:1.5em'
+    #       ),
+    #       column(
+    #         6,
+    #         div(style="text-align:center;", actionButton("smrt_button", label="Test SMRT data", style="font-size:80%")),
+    #         style='padding-bottom:0px; margin-top:-1em; margin-bottom:1.5em'
+    #       ),
+    #       style="margin-bottom:0em"
+    #     ),
+    #     style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+    #   ),
+    #   column(
+    #     4,
+    #     fileInput('genfile', 'Genome (.fa, .fasta)', accept=c('.fa', '.fasta')),
+    #     style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+    #   ),
+    #   column(
+    #     4,
+    #     fileInput('motfile', 'Motif summary (.csv, .tsv)', accept=c('.csv', '.tsv')),
+    #     style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+    #   ),
+    #   style="margin-bottom:1.2em"
+    # ),
+
     fluidRow(
       id="input_subpanel",
       column(
-        4,
-        fileInput('modfile', 'Modifications info. (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
-        style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+        10,
+        column(
+          4,
+          fileInput('modfile', 'Modifications info. (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
+          style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+        ),
+        column(
+          4,
+          fileInput('genfile', 'Genome (.fa, .fasta)', accept=c('.fa', '.fasta')),
+          style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+        ),
+        column(
+          4,
+          fileInput('motfile', 'Motif summary (.csv, .tsv)', accept=c('.csv', '.tsv')),
+          style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+        ),
+      style="margin-bottom:0.6em"
       ),
       column(
-        4,
-        fileInput('genfile', 'Genome (.fa, .fasta)', accept=c('.fa', '.fasta')),
-        style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
+        2,
+        actionButton("ont_test", label="Test ONT", style="font-size:80%; padding:4px"),
+        actionButton("smrt_test", label="Test SMRT", style="font-size:80%; padding:4px"),
+        style='padding-bottom:0px; margin-top:2.4em; margin-bottom:0em'
       ),
-      column(
-        4,
-        fileInput('motfile', 'Motif summary (.csv, .tsv)', accept=c('.csv', '.tsv')),
-        style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
-      ),
-      style="margin-bottom:1.2em"
+      style="margin-bottom:0.6em"
     ),
     style="padding-top:4px; padding-bottom:8px; padding-left:8px; padding-right:8px; margin-bottom:0.4em"
   ),

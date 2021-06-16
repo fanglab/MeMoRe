@@ -1,5 +1,6 @@
-# shiny::runApp('./app', host = '0.0.0.0', port = 3838)
-# /Users/touraa01/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot2.png
+# Run local: shiny::runApp('./app', host='0.0.0.0', port=3838)
+# Deploy: rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
+# Track ressources: ~/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot.png
 
 library(shiny)
 # options(shiny.trace=TRUE)
@@ -16,8 +17,10 @@ function(input, output, session) {
   v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
 
   debug_mode <<- FALSE
+  testing_mode <<- FALSE
   processing_version <<- 2
 
+  initial <- reactiveValues(datapath=NULL)
   rendered_motif <<- NULL
   loaded_motif <<- NULL
   downloadable_motif <<- NULL
@@ -30,13 +33,35 @@ function(input, output, session) {
   initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
 
   if(debug_mode){
-    initial <- reactiveValues(datapath=NULL)
-    initial$datapath <- "Clostridium_perfringens_ATCC13124.motif_summary.csv"
-    # initial$datapath <- "Clostridium_perfringens_ATCC13124.motif_summary.small.csv"
-    observeEvent(initial$datapath, {
-      read.motif.summary(v, initial)
-    })
+    initial$datapath <- "data/motif_summary.tsv"
   }
+  
+  # If testing with SMRT data
+  observeEvent(input$smrt_test, {
+    testing_mode <<- TRUE # Override input checking
+
+    v$modFile <- "data/modification.smrt.csv.gz"
+    v$genFile <- "data/reference.fasta"
+    v$motFile <- "data/motif_summary.tsv"
+
+    initial$datapath <- v$motFile
+  })
+  
+  # If testing with SMRT data
+  observeEvent(input$ont_test, {
+    testing_mode <<- TRUE # Override input checking
+
+    v$modFile <- "data/modification.ont.rds"
+    v$genFile <- "data/reference.fasta"
+    v$motFile <- "data/motif_summary.tsv"
+    
+    initial$datapath <- v$motFile
+  })
+
+  # Read motif summary for automated input processes
+  observeEvent(initial$datapath, {
+    read.motif.summary(v, initial)
+  })
 
   # Upload motiffile to motiftable
   observeEvent(input$motfile, {
@@ -376,7 +401,7 @@ function(input, output, session) {
 
   session$onSessionEnded(function(){
     cat("Removing temporary files\n")
-    list_graph_files <- list.files(pattern="*.gp[a|i|c|s]")
+    list_graph_files <- list.files(pattern="*.gp[a|i|c|s|o]")
     print_db(list_graph_files)
     unlink(list_graph_files)
     cat("Session ended\n")

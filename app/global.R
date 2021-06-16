@@ -1,4 +1,4 @@
-options(repos = BiocManager::repositories()) # For shinyapp.io: options(repos = BiocManager::repositories()); rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
+options(repos=BiocManager::repositories()) # For shinyapp.io: options(repos = BiocManager::repositories())
 
 iupac_nc <<- data.frame(
   code=c("A","C","G","T","R","Y","S","W","K","M","B","D","H","V","N"),
@@ -163,19 +163,19 @@ check.valid.motif <- function(motif){
 
 check.inputs  <- function(input){
   # Check modifications.csv.gz 
-  if(!debug_mode & is.null(input$modfile)){
+  if(!testing_mode & !debug_mode & is.null(input$modfile)){
     showNotification("Upload modifications.csv(.gz)", type="error")
 
     return(NULL)
   }
   # Check genome.fasta
-  if(!debug_mode & is.null(input$genfile)){
+  if(!testing_mode & !debug_mode & is.null(input$genfile)){
     showNotification("Upload genome.fasta", type="error")
 
     return(NULL)
   }
   # Check modifications.csv.gz
-  if(!debug_mode & is.null(input$motfile)){
+  if(!testing_mode & !debug_mode & is.null(input$motfile)){
     showNotification("Upload motif_summary.csv", type="error")
 
     return(NULL)
@@ -199,9 +199,11 @@ wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_m
   }
 
   # DATA INPUT
-  v$modFile <- input$modfile$datapath
-  v$genFile <- input$genfile$datapath
-  v$motFile <- input$motfile$datapath
+  if(!testing_mode){ # Use users inputs if not in testing_mode
+    v$modFile <- input$modfile$datapath
+    v$genFile <- input$genfile$datapath
+    v$motFile <- input$motfile$datapath
+  }
 
   if(debug_mode){ # TODO remove
     if(is.null(rendered_motif) | is.null(v$modFile)){
@@ -341,9 +343,7 @@ read.modification.file <- function(modFile, genFile){
 
   # Retrieve modFile information
   modFile_con <- file(modFile)
- print(modFile_con) 
   modFile_info <- summary(modFile_con)
- print(modFile_info) 
   close(modFile_con)
 
   if(modFile_info$class == "gzfile"){
