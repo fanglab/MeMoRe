@@ -1,4 +1,4 @@
-options(repos=BiocManager::repositories()) # For shinyapp.io: options(repos = BiocManager::repositories())
+options(repos=BiocManager::repositories()) # Needed for shinyapp.io
 
 iupac_nc <<- data.frame(
   code=c("A","C","G","T","R","Y","S","W","K","M","B","D","H","V","N"),
@@ -801,7 +801,7 @@ generate.ont.plots <- function(modification_at_motifs, modification_type, filter
       scale_fill_gradientn(colours=myPalette(100), guide=FALSE) +
       labs(title=paste0("Refinement plot for ",clean_motif," motifs")) +
       labs(y="Mean current differences (pA)") +
-      coord_cartesian(xlim=c(xmin_value+0.5, xmax_value-0.5), ylim=c(ymin_value, ymax_value), expand=FALSE) +
+      coord_cartesian(xlim=c(xmin_value, xmax_value), ylim=c(ymin_value, ymax_value), expand=FALSE) +
       theme_bw()
 
     if(filter_iso){

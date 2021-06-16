@@ -1,5 +1,5 @@
-# Run local: shiny::runApp('./app', host='0.0.0.0', port=3838)
-# Deploy: rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
+# Run locally: shiny::runApp('./app', host='0.0.0.0', port=3838)
+# Deploy: library(rsconnect); rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
 # Track ressources: ~/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot.png
 
 library(shiny)
@@ -12,7 +12,6 @@ source("global.R", keep.source=TRUE)
 load.libraries()
 
 # TODO dynamic nb threads
-# TODO add example data
 function(input, output, session) {
   v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
 
