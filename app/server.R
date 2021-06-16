@@ -1,10 +1,12 @@
 # shiny::runApp('./app', host = '0.0.0.0', port = 3838)
 # /Users/touraa01/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot2.png
 
+library(shiny)
+# options(shiny.trace=TRUE)
+options(shiny.maxRequestSize=1000*1024^2) 
+
 # call functions necessary for analysis
 source("global.R", keep.source=TRUE)
-
-options(shiny.maxRequestSize=1000*1024^2) 
 
 load.libraries()
 
@@ -26,7 +28,6 @@ function(input, output, session) {
   oldgenFile <<- NULL
 
   initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
-  # v$dldf <- setNames(data.table(matrix(nrow = 0, ncol = length(list_motif_manual_clean_cols))), list_motif_manual_clean_cols)
 
   if(debug_mode){
     initial <- reactiveValues(datapath=NULL)

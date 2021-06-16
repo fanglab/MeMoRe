@@ -16,7 +16,6 @@ list_motif_summary_clean_ONT_cols <<- c("Motifs", "Modified position", "Type", "
 list_motif_manual_clean_cols <<- list_motif_summary_clean_SMRT_cols[c(1,2,3)]
 
 load.libraries <- function(){
-  library(shiny)
   library(data.table)
   library(R.utils)
   library(Biostrings)
@@ -285,7 +284,9 @@ wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_m
         saveRDS(graphs$gc, file=paste0(motif_detail, ".gpc"))
         rm(graphs)
       }else if(processing_version==2){
+        gc()
         generate.process.data(v$motiF[j], v$centeR[j], v$modType[j], v$df) # 82s and peak mem usage at 750 MB
+        gc()
       }
       memuse("After process dat")
 
@@ -321,7 +322,7 @@ print.runtime.message <- function(start_time){
 }
 
 find.data.type <- function(path_modification_file){
-  if(grepl(path_modification_file, pattern="*.RDS$")){
+  if(grepl(path_modification_file, pattern="*.RDS$|*.rds$")){
     data_type <- "ONT"
   }else if(grepl(path_modification_file, pattern="*.csv$|*.csv.gz$|*/0.gz$|*/0$")){ # If already in tmp */0.gz$ */0$
     data_type <- "SMRT"
@@ -340,11 +341,13 @@ read.modification.file <- function(modFile, genFile){
 
   # Retrieve modFile information
   modFile_con <- file(modFile)
+ print(modFile_con) 
   modFile_info <- summary(modFile_con)
+ print(modFile_info) 
   close(modFile_con)
 
   if(modFile_info$class == "gzfile"){
-    path_modification_file <- gunzip(modFile, remove = FALSE, temporary = TRUE, overwrite = TRUE)
+    path_modification_file <- gunzip(modFile, temporary=TRUE, remove=FALSE, overwrite=TRUE)
   }else{
     path_modification_file <- modFile
   }
@@ -574,6 +577,7 @@ extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_m
     incProgress(.03, detail=paste0("Filter modification information."))
     overlaps_motifs_modification <- findOverlaps(gr_signal_motifs, gr_modification, type="any", select="all")
     rm(gr_signal_motifs, gr_modification)
+    gc()
     modification_at_motifs <- data.frame(
       contig=expected_signal$contig_name[overlaps_motifs_modification@from],
       pos_motif=expected_signal$contig_pos_motif[overlaps_motifs_modification@from],
@@ -585,6 +589,7 @@ extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_m
       score=modification_info$score[overlaps_motifs_modification@to]
     )
     rm(expected_signal, overlaps_motifs_modification)
+    gc()
 
     modification_at_motifs <- modification_at_motifs %>% 
       mutate(distance=ifelse(dir=="fwd",pos_signal-pos_motif,(-(pos_signal-pos_motif)) - 7)) %>% # Relative distance to mod_pos with strand correction
@@ -601,6 +606,7 @@ extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_m
     incProgress(.03, detail=paste0("Filter modification information."))
     overlaps_motifs_modification <- findOverlaps(gr_signal_motifs, gr_modification, type="any", select="all")
     rm(gr_signal_motifs, gr_modification)
+    gc()
     modification_at_motifs <- data.frame(
       contig=expected_signal$contig_name[overlaps_motifs_modification@from],
       pos_motif=expected_signal$contig_pos_motif[overlaps_motifs_modification@from],
@@ -613,6 +619,7 @@ extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_m
       mean_diff=modification_info$mean_diff[overlaps_motifs_modification@to]
     )
     rm(expected_signal, overlaps_motifs_modification)
+    gc()
 
     modification_at_motifs <- modification_at_motifs %>%
       mutate(distance=ifelse(dir=="fwd",pos_signal-pos_motif,(-(pos_signal-pos_motif)) - 7)) %>% # Relative distance to mod_pos with strand correction
