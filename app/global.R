@@ -33,6 +33,7 @@ load.libraries <- function(){
   library(RColorBrewer)
   library(egg)
   library(cowplot)
+  library(rhdf5)
 }
 
 # Improved list of objects
@@ -86,7 +87,8 @@ initialize.motif.summary <- function(v, list_motif_summary_clean_cols){
 reformat.motif.summary <- function(motif_summary){
   motif_summary <- motif_summary %>%
     mutate(`Modified position`=`Modified position` + 1) %>%
-    mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type))
+    mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) %>%
+    mutate(Type=ifelse(Type=="modified_base",paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) # From SMRTLink
   if("% motifs detected" %in% colnames(motif_summary)){
     motif_summary <- motif_summary %>%
     mutate(`% motifs detected`=round(as.numeric(`% motifs detected`),2)) %>%
@@ -161,19 +163,19 @@ check.valid.motif <- function(motif){
 check.inputs  <- function(input){
   # Check modifications.csv.gz 
   if(!testing_mode & !debug_mode & is.null(input$modfile)){
-    showNotification("Upload modifications.csv(.gz)", type="error")
+    showNotification("Upload modifications (.csv.gz, .h5)", type="error")
 
     return(NULL)
   }
   # Check genome.fasta
   if(!testing_mode & !debug_mode & is.null(input$genfile)){
-    showNotification("Upload genome.fasta", type="error")
+    showNotification("Upload genome (.fa, .fasta)", type="error")
 
     return(NULL)
   }
   # Check modifications.csv.gz
   if(!testing_mode & !debug_mode & is.null(input$motfile)){
-    showNotification("Upload motif_summary.csv", type="error")
+    showNotification("Upload motif_summary (.csv, .tsv)", type="error")
 
     return(NULL)
   }
@@ -204,12 +206,11 @@ wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_m
 
   if(debug_mode){ # TODO remove
     if(is.null(rendered_motif) | is.null(v$modFile)){
-      v$modFile <- "Clostridium_perfringens_ATCC13124.modifications.csv.gz"
-      # v$modFile <- "Clostridium_perfringens_ATCC13124.RDS"
+      v$modFile <- "data/modification.smrt.csv.gz"
+      # v$modFile <- "data/modification.ont.rds"
     }
-    v$genFile <- "Clostridium_perfringens_ATCC13124.fasta"
-    v$motFile <- "Clostridium_perfringens_ATCC13124.motif_summary.csv"
-    # v$motFile <- "Clostridium_perfringens_ATCC13124.motif_summary.small.csv"
+    v$genFile <- "data/reference.fasta"
+    v$motFile <- "data/motif_summary.tsv"
   }
   
   v$motiF <- NULL
@@ -220,7 +221,7 @@ wrapper.data.processing <- function(input, v, list_selected_motifs, list_motif_m
   if(is.null(data_type)){
     showNotification("Modification file format not recognized.", type="warning")
     Sys.sleep(1)
-    showNotification("SMRT Link (.csv.gz or .csv) or Nanodisco (.RDS) output expected.", type="error")
+    showNotification("SMRT Link (.csv.gz or .h5) or Nanodisco (.RDS) output expected.", type="error")
 
     return(NULL)
   }
@@ -323,7 +324,7 @@ print.runtime.message <- function(start_time){
 find.data.type <- function(path_modification_file){
   if(grepl(path_modification_file, pattern="*.RDS$|*.rds$")){
     data_type <- "ONT"
-  }else if(grepl(path_modification_file, pattern="*.csv$|*.csv.gz$|*/0.gz$|*/0$")){ # If already in tmp */0.gz$ */0$
+  }else if(grepl(path_modification_file, pattern="*.csv$|*.h5$|*/0.gz$|*/0$")){ # If already in tmp */0.gz$ */0$; Not clean
     data_type <- "SMRT"
   }else{
 
@@ -333,10 +334,26 @@ find.data.type <- function(path_modification_file){
   return(data_type)
 }
 
+read.hdf.file <- function(path_modification_file){
+  modification_info_tmp <- foreach(refName=subset(h5ls(path_modification_file), group=="/")$name, .combine=rbind) %do% {
+    subset_modification_info <- data.frame(
+      refName=as.factor(refName),
+      tpl=h5read(file=path_modification_file, name=paste0(refName, "/tpl")),
+      strand=as.integer(h5read(file=path_modification_file, name=paste0(refName, "/strand"))),
+      score=h5read(file=path_modification_file, name=paste0(refName, "/score")),
+      ipdRatio=h5read(file=path_modification_file, name=paste0(refName, "/ipdRatio")),
+      coverage=h5read(file=path_modification_file, name=paste0(refName, "/coverage"))
+    )
+
+    return(subset_modification_info)
+  }
+  h5closeAll()
+
+  return(modification_info_tmp)
+}
+
 read.modification.file <- function(modFile, genFile){
-  # modFile <- "~/Desktop/Clostridium_perfringens_ATCC13124.modifications.csv.gz"
-  # modFile <- "~/Softwares/SMRT-debugMotifs/app/Clostridium_perfringens_ATCC13124.RDS"
-  # genFile <- "~/Softwares/SMRT-debugMotifs/app/Clostridium_perfringens_ATCC13124.fasta"
+  is_h5 <- FALSE
 
   # Retrieve modFile information
   modFile_con <- file(modFile)
@@ -345,6 +362,11 @@ read.modification.file <- function(modFile, genFile){
 
   if(modFile_info$class == "gzfile"){
     path_modification_file <- gunzip(modFile, temporary=TRUE, remove=FALSE, overwrite=TRUE)
+  }else if(grepl("*.zip$", modFile)){
+    path_modification_file <- unzip(modFile, overwrite=TRUE, junkpaths=TRUE)
+  }else if(grepl("*.h5$", modFile)){
+    is_h5 <- TRUE
+    path_modification_file <- modFile
   }else{
     path_modification_file <- modFile
   }
@@ -353,13 +375,19 @@ read.modification.file <- function(modFile, genFile){
   if(is.null(data_type)){
     showNotification("Modification file format not recognized.", type="warning")
     Sys.sleep(1)
-    showNotification("SMRT Link (.csv.gz or .csv) or Nanodisco (.RDS) output expected.", type="error")
+    showNotification("SMRT Link (.csv.gz or .h5) or Nanodisco (.RDS) output expected.", type="error")
 
     return(NULL)
   }
 
+  # Reading dataset
   if(data_type=="SMRT"){
-    modification_info <<- fread(path_modification_file, sep=",", header=TRUE, verbose=FALSE, drop=c(6, 7, 8, 11, 12, 13), stringsAsFactors=TRUE) # Read modification file
+    if(is_h5){
+      modification_info <<- read.hdf.file(path_modification_file)
+    }else{
+      modification_info <<- fread(path_modification_file, sep=",", header=TRUE, verbose=FALSE, drop=c(4, 6, 7, 8, 11, 12, 13), stringsAsFactors=TRUE) # Read modification file
+    }
+
     list_contigs <- str_split(levels(modification_info$refName), pattern=" ", simplify=TRUE)[,1]
   }else if(data_type=="ONT"){
     modification_info <<- readRDS(path_modification_file)
@@ -384,7 +412,6 @@ read.modification.file <- function(modFile, genFile){
 
 generate.mutated.motif <- function(motifs_summary){
   # Generate sets of mutated motifs
-  # print(paste0("  Generating set of mutated motifs."))
   mutated_motifs <- foreach(idx_motif=seq_along(motifs_summary$motifString), .combine=rbind) %do% {
     len_motif <- nchar(motifs_summary$motifString[idx_motif])
     motif <- motifs_summary$motifString[idx_motif]
@@ -641,7 +668,7 @@ generate.process.data <- function(motif, center, modification_type, motifs_summa
 
   filter_iso <- FALSE # Remove overlapping motifs
   min_cov <- 0 # No coverage threshold
-  nb_threads <- 2
+  nb_threads <- 1
 
   if(c("tpl") %in% colnames(modification_info)){
     data_type <- "SMRT"

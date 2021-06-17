@@ -2,6 +2,8 @@
 # Deploy: library(rsconnect); rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
 # Track ressources: ~/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot.png
 
+app_version <<- "0.1.0_dev"
+
 library(shiny)
 # options(shiny.trace=TRUE)
 options(shiny.maxRequestSize=1000*1024^2) 
@@ -11,7 +13,7 @@ source("global.R", keep.source=TRUE)
 
 load.libraries()
 
-# TODO dynamic nb threads
+# TODO add like tutorial
 function(input, output, session) {
   v <- reactiveValues(modFile=NULL, genFile=NULL, motFile=NULL, motiF=NULL, centeR=NULL, modType=NULL)
 
@@ -25,6 +27,7 @@ function(input, output, session) {
   downloadable_motif <<- NULL
   downloadable <- reactiveValues(status=FALSE)
   process_all <<- 0
+  load_testing_data <<- 0
 
   oldmodFile <<- NULL
   oldgenFile <<- NULL
@@ -32,6 +35,7 @@ function(input, output, session) {
   initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
 
   if(debug_mode){
+    # Use testing data directly
     initial$datapath <- "data/motif_summary.tsv"
   }
   
@@ -39,26 +43,45 @@ function(input, output, session) {
   observeEvent(input$smrt_test, {
     testing_mode <<- TRUE # Override input checking
 
+    # Reset motif summary table
+    initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
+
     v$modFile <- "data/modification.smrt.csv.gz"
     v$genFile <- "data/reference.fasta"
     v$motFile <- "data/motif_summary.tsv"
 
     initial$datapath <- v$motFile
+
+    load_testing_data <<- 1 # Keep track of actionButton status
+
+    # Hide inputs
+    updateActionButton(session, "input_toggle", label="Show")
+    shinyjs::hide(id="input_subpanel")
   })
   
   # If testing with SMRT data
   observeEvent(input$ont_test, {
     testing_mode <<- TRUE # Override input checking
 
+    # Reset motif summary table
+    initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
+
     v$modFile <- "data/modification.ont.rds"
     v$genFile <- "data/reference.fasta"
     v$motFile <- "data/motif_summary.tsv"
     
     initial$datapath <- v$motFile
+
+    load_testing_data <<- 1 # Keep track of actionButton status
+
+    # Hide inputs
+    updateActionButton(session, "input_toggle", label="Show")
+    shinyjs::hide(id="input_subpanel")
   })
 
-  # Read motif summary for automated input processes
+  # Initialize automated input processes
   observeEvent(initial$datapath, {
+    # Read motif summary
     read.motif.summary(v, initial)
   })
 
@@ -134,6 +157,16 @@ function(input, output, session) {
       return(NULL)
     }
   
+    process_all <<- 1 # Keep track of actionButton status
+
+    # Hide inputs
+    updateActionButton(session, "input_toggle", label="Show")
+    shinyjs::hide(id="input_subpanel")
+
+    # Hide motif summary
+    updateActionButton(session, "motif_toggle", label="Show")
+    shinyjs::hide(id="motif_subpanel")
+
     print.runtime.message(start_time)
   })
 
@@ -297,7 +330,7 @@ function(input, output, session) {
   })
 
   observeEvent(input$input_toggle, {
-    if(((input$input_toggle + process_all) %% 2) == 0){
+    if(((input$input_toggle + process_all + load_testing_data) %% 2) == 0){
       updateActionButton(session, "input_toggle", label="Hide")
       shinyjs::show(id="input_subpanel")
     }else{
@@ -315,18 +348,6 @@ function(input, output, session) {
       updateActionButton(session, "motif_toggle", label="Show")
       shinyjs::hide(id="motif_subpanel")
     }
-  })
-
-  observeEvent(input$submit_all, {
-    process_all <<- 1 # Keep track of actionButton status
-
-    # Hide inputs
-    updateActionButton(session, "input_toggle", label="Show")
-    shinyjs::hide(id="input_subpanel")
-
-    # Hide motif summary
-    updateActionButton(session, "motif_toggle", label="Show")
-    shinyjs::hide(id="motif_subpanel")
   })
 
   # Generate .zip file with graphs from all processed motifs 
@@ -397,6 +418,10 @@ function(input, output, session) {
       zip(file, list_graph_files)
     }
   )
+
+  output$app_version <- renderUI({
+    tags$a(href="https://github.com/touala/SMRT-debugMotifs", app_version)
+  })
 
   session$onSessionEnded(function(){
     cat("Removing temporary files\n")

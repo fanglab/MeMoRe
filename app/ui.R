@@ -5,23 +5,34 @@ library(shinyjs)
 
 shinyUI(fluidPage(verticalLayout(
   useShinyjs(),
-  titlePanel("MotifRefiner"),
 
-  tags$head(tags$style(
-    type="text/css",
-    "h4 {display: inline;}",
-    "[id^='combined_'] img {max-width: 100%; height: auto;}",
-    "[id='download_button'] {display: inline;}",
-    "ul[class^='nav'] [data-value$='_SMRT'] { background-color: #FFF; color: #D21F3B; border-color: #F8F8F8; border-bottom-color: #DDDDDD;}",
-    "ul[class^='nav'] [data-value$='_ONT'] { background-color: #FFF; color: #005D75; border-color: #F8F8F8; border-bottom-color: #DDDDDD;}"
-  )),
+  tags$head(
+    tags$style(
+      type="text/css",
+      "h2 {display: inline;}",
+      "h4 {display: inline;}",
+      "[id^='combined_'] img {max-width: 100%; height: auto;}",
+      "[id='download_button'] {display: inline;}",
+      "[id='app_version'] {display: inline;}",
+      "ul[class^='nav'] [data-value$='_SMRT'] { background-color: #FFF; color: #D21F3B; border-color: #F8F8F8; border-bottom-color: #DDDDDD; padding:4px; font-size:90%;}",
+      "ul[class^='nav'] [data-value$='_ONT'] { background-color: #FFF; color: #005D75; border-color: #F8F8F8; border-bottom-color: #DDDDDD; padding:4px; font-size:90%;}"
+    ),
+    tags$link(rel="shortcut icon", href="http://icongal.com/gallery/image/89511/file_paper_blank_document.png")
+  ),
+
+  div(
+    titlePanel("MeMoRe"),
+    HTML('&nbsp;'),
+    uiOutput("app_version")
+  ),
 
   wellPanel(
     id="input_panel",
 
     div(
       h4("Inputs"),
-      actionButton("input_toggle", label="Hide", style='padding:4px; font-size:80%; margin-bottom:0.4em'), style='margin-top:-0em; margin-bottom:-0.2em'
+      actionButton("input_toggle", label="Hide", style='padding:4px; font-size:80%; margin-bottom:0.4em'),
+      style='margin-top:-0em; margin-bottom:-0.6em'
     ),
 
     fluidRow(
@@ -30,7 +41,7 @@ shinyUI(fluidPage(verticalLayout(
         10,
         column(
           4,
-          fileInput('modfile', 'Modifications (.csv, .csv.gz, .RDS)', accept=c('.gz', '.csv', '.RDS')),
+          fileInput('modfile', 'Modifications (.csv.gz, .h5, .RDS)', accept=c('.gz', '.h5', '.RDS')),
           style='padding-bottom:0px; margin-top:0.4em; margin-bottom:-3em'
         ),
         column(
@@ -79,7 +90,7 @@ shinyUI(fluidPage(verticalLayout(
         ),
         div(
           style="display: inline-block; vertical-align:top; width: 100px; text-align: left; margin-top: 0.6em",
-          textInput(inputId="center", label="Modified pos.", placeholder="1")
+          textInput(inputId="center", label="Modified pos.", placeholder="2")
         ),
         br(),
         actionButton("addmotif", "Add motif"), 
