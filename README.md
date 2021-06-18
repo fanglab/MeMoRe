@@ -1,37 +1,39 @@
-## Welcome to GitHub Pages
+# memore
 
-You can use the [editor on GitHub](https://github.com/touala/SMRT-debugMotifs/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+`MeMoRe` stand for Methylation Motif Refiner. This is a tool designed to validate methylation motifs detected with SMRT and ONT sequencing.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+## Authors' notes
+We are actively developing `MeMoRe` to facilitate usage and broaden features. All feedback is more than welcome. You can reach us on twitter ([@iamfanggang](https://twitter.com/iamfanggang) and [@AlanTourancheau](https://twitter.com/AlanTourancheau)) or directly through the [GitHub issues system](https://github.com/fanglab/MeMoRe/issues).
 
-### Markdown
+## Content
++ [Usage](#Usage)
++ [Tool showcase](#Tool-showcase)
+  + [Analysis of SMRT results](#Analysis-of-SMRT-results)
+  + [Analysis of ONT results](#Analysis-of-ONT-results)
++ [Documentation](#Documentation)
++ [Citation](#Citation)
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+## Usage
+To apply `MeMoRe` on your own dataset or use our testing dataset please follow: https://fanglab-tools.shinyapps.io/MeMoRe/. `MeMoRe` is designed to be user freindly and therefore is distributed as a [Shiny] application through [shinyapps.io] hosting solution. `MeMoRe` can be run from any system, without computational resources restriction.
 
-```markdown
-Syntax highlighted code block
+## Tool showcase
+To showcase the toolbox applications and facilitate an understanding of the methods, we build-in example datasets for SMRT and ONT analyses in [MeMoRe app](https://fanglab-tools.shinyapps.io/MeMoRe/).
 
-# Header 1
-## Header 2
-### Header 3
+### Analysis of SMRT results
 
-- Bulleted
-- List
+![Output SMRT](/docs/figures/todo.smrt.png "E. coli xxx methylation motif results")
 
-1. Numbered
-2. List
+### Analysis of ONT results
 
-**Bold** and _Italic_ and `Code` text
+![Output ONT](/docs/figures/todo.ont.png "E. coli xxx methylation motif results")
 
-[Link](url) and ![Image](src)
-```
+## Documentation
+For a comprehensive description of `MeMoRe` including a detailed tutorial, please consult the [complete documentation][Full Documentation].
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+## Citation
 
-### Jekyll Themes
+A preprint is in preparation. Meanwhile, please cite the GitHub repository: https://github.com/fanglab/MeMoRe.
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/touala/SMRT-debugMotifs/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+[Shiny]: https://shiny.rstudio.com/
+[shinyapps.io]: https://www.shinyapps.io/
+[Full Documentation]: https://MeMoRe.readthedocs.io/en/latest/overview.html

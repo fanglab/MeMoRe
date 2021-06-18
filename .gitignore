@@ -1,0 +1,5 @@
+app/rsconnect/
+app/*.gp*
+app/data/
+app/Clostridium_perfringens_ATCC13124*
+data/
