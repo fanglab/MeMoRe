@@ -42,6 +42,7 @@ function(input, output, session) {
   # If testing with SMRT data
   observeEvent(input$smrt_test, {
     testing_mode <<- TRUE # Override input checking
+    initial$datapath <- NULL
 
     # Reset motif summary table
     initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
@@ -52,7 +53,8 @@ function(input, output, session) {
 
     initial$datapath <- v$motFile
 
-    load_testing_data <<- 1 # Keep track of actionButton status
+    load_testing_data <<- load_testing_data + 1 # Keep track of actionButton status
+    # load_testing_data <<- 1 # Keep track of actionButton status
 
     # Hide inputs
     updateActionButton(session, "input_toggle", label="Show")
@@ -62,6 +64,7 @@ function(input, output, session) {
   # If testing with SMRT data
   observeEvent(input$ont_test, {
     testing_mode <<- TRUE # Override input checking
+    initial$datapath <- NULL
 
     # Reset motif summary table
     initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
@@ -72,7 +75,8 @@ function(input, output, session) {
     
     initial$datapath <- v$motFile
 
-    load_testing_data <<- 1 # Keep track of actionButton status
+    load_testing_data <<- load_testing_data + 1 # Keep track of actionButton status
+    # load_testing_data <<- 1 # Keep track of actionButton status
 
     # Hide inputs
     updateActionButton(session, "input_toggle", label="Show")
@@ -81,6 +85,7 @@ function(input, output, session) {
 
   # Initialize automated input processes
   observeEvent(initial$datapath, {
+ print("Update table")
     # Read motif summary
     read.motif.summary(v, initial)
   })
@@ -157,7 +162,8 @@ function(input, output, session) {
       return(NULL)
     }
   
-    process_all <<- 1 # Keep track of actionButton status
+    process_all <<- process_all + 1 # Keep track of actionButton status
+    load_testing_data <<- 0 # Reset value to keep track of actionButton status
 
     # Hide inputs
     updateActionButton(session, "input_toggle", label="Show")
@@ -330,7 +336,7 @@ function(input, output, session) {
   })
 
   observeEvent(input$input_toggle, {
-    if(((input$input_toggle + process_all + load_testing_data) %% 2) == 0){
+    if( ((input$input_toggle + load_testing_data + process_all) %% 2 == 0) ){
       updateActionButton(session, "input_toggle", label="Hide")
       shinyjs::show(id="input_subpanel")
     }else{

@@ -324,7 +324,7 @@ print.runtime.message <- function(start_time){
 find.data.type <- function(path_modification_file){
   if(grepl(path_modification_file, pattern="*.RDS$|*.rds$")){
     data_type <- "ONT"
-  }else if(grepl(path_modification_file, pattern="*.csv$|*.h5$|*/0.gz$|*/0$")){ # If already in tmp */0.gz$ */0$; Not clean
+  }else if(grepl(path_modification_file, pattern="*.csv.gz$|*.csv$|*.h5$|*/0.gz$|*/0$")){ # If already in tmp */0.gz$ */0$; Not clean
     data_type <- "SMRT"
   }else{
 
