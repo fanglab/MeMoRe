@@ -63,5 +63,5 @@ html_theme_options = {
     'logo_only': True,
     'display_version': True,
 }
-html_logo = "/docs/figures/MeMoRe.logo.pdf"
+html_logo = "_static/MeMoRe.logo.pdf"
 
