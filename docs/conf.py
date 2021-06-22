@@ -64,4 +64,5 @@ html_theme_options = {
     'display_version': True,
 }
 html_logo = "_static/MeMoRe.logo.svg"
+html_favicon = "_static/MeMoRe.favicon_96.png"
 
