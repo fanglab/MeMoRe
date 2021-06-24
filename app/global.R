@@ -85,8 +85,30 @@ initialize.motif.summary <- function(v, list_motif_summary_clean_cols){
 }
 
 reformat.motif.summary <- function(motif_summary){
+  # Correct modified base position depending on summary type
+  if(any(motif_summary$`Modified position`==0)){
+    # It's definitely 0-based
+    mod_pos_offset <- 1
+  }else{
+    motif_summary_version <- motif_summary %>%
+      mutate(mod_base=substr(Type, nchar(Type), nchar(Type))) %>%
+      mutate(mod_base=ifelse(mod_base %in% c("A","C"), mod_base, "x")) %>%
+      mutate(zero_based=substr(Motifs,`Modified position`+1,`Modified position`+1)) %>%
+      mutate(one_based=substr(Motifs,`Modified position`,`Modified position`)) %>%
+      mutate(zero_based_match=ifelse(mod_base=="x",ifelse(zero_based %in% c("A","C"),1,0),ifelse(zero_based==mod_base,1,0))) %>%
+      mutate(one_based_match=ifelse(mod_base=="x",ifelse(one_based %in% c("A","C"),1,0),ifelse(one_based==mod_base,1,0))) %>%
+      summarize(zero_based_res=sum(zero_based_match)/n(), one_based_res=sum(one_based_match)/n())
+    if(motif_summary_version$zero_based_res > motif_summary_version$one_based_res){
+      # It's likely 0-based
+      mod_pos_offset <- 1
+    }else{
+      # It's likely 1-based
+      mod_pos_offset <- 0
+    }
+  }
+
   motif_summary <- motif_summary %>%
-    mutate(`Modified position`=`Modified position` + 1) %>%
+    mutate(`Modified position`=`Modified position` + mod_pos_offset) %>%
     mutate(Type=ifelse(is.na(Type),paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) %>%
     mutate(Type=ifelse(Type=="modified_base",paste0("x",substr(Motifs,`Modified position`,`Modified position`)),Type)) # From SMRTLink
   if("% motifs detected" %in% colnames(motif_summary)){
@@ -563,6 +585,8 @@ extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_m
   memuse("- After find.motifs")
 
   if(filter_iso){
+    memuse("- Filtering isolated motifs")
+
     incProgress(.04, detail=paste0("Localize background motif sites."))
     background_motifs_summary <- subset(motifs_summary, ! Motifs %in% unique(mutated_motifs$original_motif))
     # Adapt for detection of background motifs
@@ -580,11 +604,18 @@ extract.motifs.signal <- function(modification_info, data_type, g_seq, mutated_m
     )
 
     incProgress(.03, detail=paste0("Remove overlapping motif sites."))
-    overlapping_background_motifs <- findOverlaps(gr_signal_motifs, gr_background_signal_motifs, type="any", select="all")
+    withCallingHandlers(expr={
+      overlapping_background_motifs <- findOverlaps(gr_signal_motifs, gr_background_signal_motifs, type="any", select="all")
+    }, warning=function(w){
+      if(grepl("Each of the 2 combined objects has sequence levels not in the other", w$message)){
+        invokeRestart("muffleWarning")
+      }
+    })
     if(length(overlapping_background_motifs)>0){
       gr_signal_motifs <- gr_signal_motifs[-overlapping_background_motifs@from]
       expected_signal <- expected_signal[-overlapping_background_motifs@from,]
     }
+    memuse("- After isolated motifs")
   }else{
     incProgress(.07, detail="")
   }
@@ -666,7 +697,7 @@ generate.process.data <- function(motif, center, modification_type, motifs_summa
   right_signal <- -1 # No overlap filtering
   error_margin <- -1 # No overlap filtering
 
-  filter_iso <- FALSE # Remove overlapping motifs
+  filter_iso <- TRUE # Remove overlapping motifs
   min_cov <- 0 # No coverage threshold
   nb_threads <- 1
 

@@ -85,7 +85,6 @@ function(input, output, session) {
 
   # Initialize automated input processes
   observeEvent(initial$datapath, {
- print("Update table")
     # Read motif summary
     read.motif.summary(v, initial)
   })
@@ -426,7 +425,7 @@ function(input, output, session) {
   )
 
   output$app_version <- renderUI({
-    tags$a(href="https://github.com/touala/SMRT-debugMotifs", app_version)
+    tags$a(href="https://github.com/touala/SMRT-debugMotifs", app_version, style="color:#333")
   })
 
   session$onSessionEnded(function(){
