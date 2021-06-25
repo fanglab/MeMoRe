@@ -21,6 +21,7 @@ import sphinx_rtd_theme
 project = 'MeMoRe'
 copyright = '2021, Alan Tourancheau'
 author = 'Alan Tourancheau'
+version = '0.1.0_dev'
 
 # The full version, including alpha/beta/rc tags
 release = '2021'
