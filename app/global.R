@@ -697,7 +697,7 @@ generate.process.data <- function(motif, center, modification_type, motifs_summa
   right_signal <- -1 # No overlap filtering
   error_margin <- -1 # No overlap filtering
 
-  filter_iso <- TRUE # Remove overlapping motifs
+  filter_iso <- FALSE # Remove overlapping motifs
   min_cov <- 0 # No coverage threshold
   nb_threads <- 1
 

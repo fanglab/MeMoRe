@@ -15,7 +15,7 @@ Analysis of SMRT results
 
 In SMRT sequencing, DNA methylation affect the kinetics of the polymerases used for the sythesis of the SMRTBell templates. The changes of polymerase's kinetics are observed through the Inter-Pulse Duration (IPD) metric which are compared to prediction from an *in silico* model at each genomic position. The resulting metric is called the IPD ratio (IPD native/IPD *in silico*). For 6mA and 4mC DNA modification, the IPD ratio increase on top of the methylated positions while an IPD ratio of 1 means no kinetic change. However, 5mC do not typically produce detectable signal and cannot be reliably found from SMRT data.
 
-The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylation motif in a *C. perfringens* strain. It shows high values only for the IPD ratios and for the Score from the motif of interest (i.e. GTATAC), while the related motifs (with one substitution) have metrics at background levels (\~1 for the IPD ratio and \~0 for the Score).    
+The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylation motif in a *C. perfringens* strain. It shows high values only for the IPD ratios and for the Score from the motif of interest (i.e. GTATAC), while the related motifs (with one substitution) have metrics at background levels (\~1 for the IPD ratio and \~0 for the Score).
 
 .. figure:: figures/GTATAC_5_combined.png
    :width: 800
