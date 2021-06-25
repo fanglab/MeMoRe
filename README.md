@@ -28,13 +28,16 @@ For each methylation motif *de novo* discovered, we identify all occurrences in 
 ### Analysis of SMRT results
 In SMRT sequencing, DNA methylation affect the kinetics of the polymerases used for the sythesis of the SMRTBell templates. The changes of polymerase's kinetics are observed through the Inter-Pulse Duration (IPD) metric which are compared to prediction from an *in silico* model at each genomic position. The resulting metric is called the IPD ratio (IPD native/IPD *in silico*). For 6mA and 4mC DNA modification, the IPD ratio increase on top of the methylated positions while an IPD ratio of 1 means no kinetic change. However, 5mC do not typically produce detectable signal and cannot be reliably found from SMRT data.
 
+The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylation motif in a *C. perfringens* strain. It shows high values only for the IPD ratios and for the Score from the motif of interest (i.e. GTATAC), while the related motifs (with one substitution) have metrics at background levels (\~1 for the IPD ratio and \~0 for the Score).    
 ![Output SMRT](/docs/figures/GTATAC_5_combined.png "C. perfringens's GTAT6mAC methylation motif results")
-<sub>*Three metrics are visualized: 1. IPD ratio distribution, 2. Score distribution, 3. Coverage distribution.*</sub><br />
-
+<sub>***Figure 1**: MeMoRe results for SMRT dataset of C. perfringens's GTAT6mAC methylation motif. Three metrics are visualized: 1. IPD ratio distribution, 2. Score distribution, 3. Coverage distribution.*</sub><br />
 
 ### Analysis of ONT results
+In ONT sequencing, DNA methylation affect the electric current measured while the DNA molecules transfers through the nanopores. Using [nanodisco](https://github.com/fanglab/nanodisco>), current differences between the native and the Whole Genome Amplified samples are computed at each genomic position and this metric represent the methylation signal for ONT dataset. The further from 0 the current difference are, the more likely the genomic is modified. Contrary to SMRT sequencing, the signal is broadly distributed and not restricted to the modified base, meaning that signal for multiple genomic positions needs to be monitored.
 
+The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylation motif in a *C. perfringens* strain. It shows disturbed current differences only from the motif of interest (i.e. GTATAC), while the related motifs (with one substitution) have current difference at background levels (distribution centered around zero).    
 ![Output ONT](/docs/figures/GTATAC_5_ont.png "C. perfringens's GTAT6mAC methylation motif results")
+<sub>***Figure 2**: MeMoRe results for ONT dataset of C. perfringens's GTAT6mAC methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation Score*</sub><br />
 
 ## Documentation
 For a comprehensive description of `MeMoRe` including a detailed tutorial, please consult the [complete documentation][Full Documentation].
