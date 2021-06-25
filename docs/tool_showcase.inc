@@ -1,5 +1,3 @@
-.. _tool-showcase:
-
 Tool showcase
 =============
 
