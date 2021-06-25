@@ -100,7 +100,7 @@ To refine the motif of interest, we can use the "Motif summary" panel to extend 
 
 This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). The resulting motif can be added to the "Motif summary" panel and the associated plot can be generated (see Figure 10 below).
 
-.. figure:: figures/VGACAT_4_ont.png
+.. figure:: figures/VGACAT_5_ont.png
    :width: 800
    :align: center
    :alt: C. perfringens's VGAC6mAT methylation motif results
