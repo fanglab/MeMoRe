@@ -27,28 +27,65 @@ In SMRT sequencing, DNA methylation affect the kinetics of the polymerases used 
 
 The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is incomplete, and *de novo* discovered motif is too general. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
 
-* GACAT (has error)
-* GGTCC (has error)
-* GATC
-* TTTAYNNNNNGTG
-* CCGG
-* GTATAC
-* CACNNNNNRTAAA
-* WGGCCW
+* TTT6mACNNNNNGTG (has error)
+* GAC6mAT (has error)
+* GTAT6mAC
+* C6mACNNNNNRTAAA
+* WGG4mCCW
+* GGW5mCC (not detectable with SMRT data)
+* GAT5mC (not detectable with SMRT data)
+* 5mCCGG (not detectable with SMRT data)
 
-..
-  TTT6mACNNNNNGTG TTTACNNNNNGTG 4 6mA 99.00
-..
-  TTT6mAYNNNNNGTG TTTAYNNNNNGTG 4 6mA 99.00
-..
-  GAC6mAT GACAT 4 6mA 99.00
-..
-  NNGAC6mATNN NNGACATNN 6 6mA 99.00
-..
-  VGAC6mAT  VGACAT  5 6mA 99.00
+Motif is too general
+--------------------
 
+In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** high IPD ratio for GAC6mAT (i.e. dense IPD ratio distribution at background level, around zero), while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 1). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
-.. _ONT_analysis:
+.. figure:: figures/GACAT_4_combined.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's GAC6mAT methylation motif results
+
+   **Figure 1**: MeMoRe results for SMRT dataset of C. perfringens's GAC6mAT methylation motif.
+
+To refine the motif of interest, we can use the "Motif summary" panel to extend the motif evaluation space by adding "NN" as prefix and suffix so that many more motif compositions are considered (e.g. **A**\ GACAT, **T**\ NGACAT, GACATN\ **C**, etc.). The resulting analysis is displayed in Figure 2 below.
+
+.. figure:: figures/NNGACATNN_6_combined.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's NNGAC6mATNN methylation motif results
+
+   **Figure 2**: MeMoRe results for SMRT dataset of C. perfringens's NNGAC6mATNN methylation motif.
+
+This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). The resulting motif can be added to the "Motif summary" panel and the associated plot can be generated (see Figure 3 below).
+
+.. figure:: figures/VGACAT_5_combined.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's VGAC6mAT methylation motif results
+
+   **Figure 3**: MeMoRe results for SMRT dataset of C. perfringens's VGAC6mAT methylation motif.
+
+Motif is incomplete
+-------------------
+
+In this example, the putative motif reported by the analytical pipeline is TTT6mACNNNNNGTG. We run MeMoRe on the dataset, and the visualization shows high IPD ratio for TTTACNNNNNGTG, and TTTATNNNNNGTG, while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 4). This indicate that the putative motif is incomplete and that the actual methylation motif is TTT6mAYNNNNNGTG (Y = C or T).
+
+.. figure:: figures/TTTACNNNNNGTG_combined.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's TTT6mACNNNNNGTG methylation motif results
+
+   **Figure 4**: MeMoRe results for SMRT dataset of C. perfringens's TTT6mACNNNNNGTG methylation motif.
+
+We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 5 below).
+
+.. figure:: figures/TTTAYNNNNNGTG_combined.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's TTT6mAYNNNNNGTG methylation motif results
+
+   **Figure 5**: MeMoRe results for SMRT dataset of C. perfringens's TTT6mAYNNNNNGTG methylation motif.
 
 Analysis of ONT results
 =======================
@@ -57,19 +94,19 @@ In ONT sequencing, DNA methylation affect the electric current measured while th
 
 The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is too general, *de novo* discovered motif is incomplete, and partially overlapping *de novo* discovered motifs. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
 
-* GACAT (has error)
-* GGTCC (has error)
-* GATC
-* TTTAYNNNNNGTG
-* CCGG
-* GTATAC
-* CACNNNNNRTAAA
-* WGGCCW
+* GAC6mAT (has error)
+* GGT5mCC (has error)
+* GAT5mC
+* 5mCCGG
+* GTAT6mAC
+* TTT6mAYNNNNNGTG
+* C6mACNNNNNRTAAA
+* WGG4mCCW
 
 Motif is too general
 --------------------
 
-In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbence for GAC6mAT (i.e. dense current difference distribution at bacjgournd level, around zero), while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
+In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbence for GAC6mAT (i.e. dense current difference distribution at background level, around zero), while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
 .. figure:: figures/GACAT_4_ont.png
    :width: 800
@@ -87,7 +124,7 @@ To refine the motif of interest, we can use the "Motif summary" panel to extend 
 
    **Figure 7**: MeMoRe results for ONT dataset of C. perfringens's NNGAC6mATNN methylation motif.
 
-This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). The resulting motif can be added to the "Motif summary" panel and the associated plot can be generated (see Figure 8 below). The figure also shows weak signal for VGACCT which is explained by partial overlap with GGWCC (i.e. GGACCt, see :ref:`ONT overlap`).
+This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). The resulting motif can be added to the "Motif summary" panel and the associated plot can be generated (see Figure 8 below). The figure also shows weak signal for VGACCT which is explained by partial overlap with GGWCC (i.e. GGACCt, see `Overlapping motifs`_).
 
 .. figure:: figures/VGACAT_5_ont.png
    :width: 800
@@ -108,7 +145,7 @@ In this example, the putative motif reported by the analytical pipeline is GGT5m
 
    **Figure 9**: MeMoRe results for ONT dataset of C. perfringens's GGT5mCC methylation motif.
 
-We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two addionnals related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see :ref:`ONT overlap`).
+We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two addionnals related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see `Overlapping motifs`_).
 
 .. figure:: figures/GGWCC_4_ont.png
    :width: 800
