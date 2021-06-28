@@ -39,7 +39,7 @@ The following figures showcase typical situations that can be resolved with `MeM
 Motif is too general
 --------------------
 
-In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** high IPD ratio for GAC6mAT (i.e. dense IPD ratio distribution at background level, around zero), while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 1). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
+In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** high IPD ratio for GAC6mAT (i.e. dense IPD ratio distribution at background level, around one), while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 1). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
 .. figure:: figures/GACAT_4_combined.png
    :width: 800
