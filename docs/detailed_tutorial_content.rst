@@ -25,7 +25,16 @@ Analysis of SMRT results
 
 In SMRT sequencing, DNA methylation affect the kinetics of the polymerases used for the sythesis of the SMRTBell templates. The changes of polymerase's kinetics are observed through the Inter-Pulse Duration (IPD) metric which are compared to prediction from an *in silico* model at each genomic position. The resulting metric is called the IPD ratio (IPD native/IPD *in silico*). For 6mA and 4mC DNA modification, the IPD ratio increase on top of the methylated positions while an IPD ratio of 1 means no kinetic change. However, 5mC do not typically produce detectable signal and cannot be reliably found from SMRT data.
 
-The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is incomplete, and *de novo* discovered motif is too general.
+The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is incomplete, and *de novo* discovered motif is too general. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
+
+* GACAT (has error)
+* GGTCC (has error)
+* GATC
+* TTTAYNNNNNGTG
+* CCGG
+* GTATAC
+* CACNNNNNRTAAA
+* WGGCCW
 
 ..
   TTT6mACNNNNNGTG TTTACNNNNNGTG 4 6mA 99.00
@@ -90,7 +99,7 @@ This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). T
 Motif is incomplete
 -------------------
 
-In this example, the putative motif reported by the analytical pipeline is GGT5mCC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GGTCC, GGACC, and GATCC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 9). GATCC is fully overlapping with GATC and therefore is not new (see :ref:`ONT overlap`). This indicate that the putative motif is incomplete and that the actual methylation motif is GGW5mCC (W = A or T).
+In this example, the putative motif reported by the analytical pipeline is GGT5mCC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GGTCC, GGACC, and GATCC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 9). GATCC is fully overlapping with GATC and therefore is not new (see `Overlapping motifs`_). This indicate that the putative motif is incomplete and that the actual methylation motif is GGW5mCC (W = A or T).
 
 .. figure:: figures/GGTCC_4_ont.png
    :width: 800
