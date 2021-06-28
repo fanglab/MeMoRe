@@ -48,9 +48,9 @@ In ONT sequencing, DNA methylation affect the electric current measured while th
 
 The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is too general, *de novo* discovered motif is incomplete, and partially overlapping *de novo* discovered motifs. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
 
-*  GACAT (has error)
-*  GGTCC (has error)
-*  GATC
+* GACAT (has error)
+* GGTCC (has error)
+* GATC
 * TTTAYNNNNNGTG
 * CCGG
 * GTATAC
@@ -69,7 +69,7 @@ In this example, the putative motif reported by the analytical pipeline is GAC6m
 
    **Figure 6**: MeMoRe results for ONT dataset of C. perfringens's GAC6mAT methylation motif.
 
-To refine the motif of interest, we can use the "Motif summary" panel to extend the motif evaluation space by adding "NN" as prefix and suffix so that many more motif compositions are considered (e.g. **A**GACAT, **T**NGACAT, GACATN**C**, etc.). The resulting analysis is displayed in Figure 7 below.
+To refine the motif of interest, we can use the "Motif summary" panel to extend the motif evaluation space by adding "NN" as prefix and suffix so that many more motif compositions are considered (e.g. **A**\ GACAT, **T**\ NGACAT, GACATN\ **C**, etc.). The resulting analysis is displayed in Figure 7 below.
 
 .. figure:: figures/NNGACATNN_6_ont.png
    :width: 800
@@ -113,16 +113,11 @@ We can use the "Motif summary" panel to add the complete motif and generate the 
 Overlapping motifs
 ------------------
 
+In this example, the motif reported by the analytical pipeline is GAT5mC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GATC but also GGTC and GACC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 11). GGTC and GACC are partially overlapping with GGWCC and therefore are not new. This indicate that all the additional methylation signal can be explained by GGW5mCC, therefore GATC and GGWCC explains all the signal visualized.
+
 .. figure:: figures/GATC_4_ont.png
    :width: 800
    :align: center
    :alt: C. perfringens's GAT5mC methylation motif results
 
    **Figure 11**: MeMoRe results for ONT dataset of C. perfringens's GAT5mC methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
-
-.. figure:: figures/GTATAC_5_ont.png
-   :width: 800
-   :align: center
-   :alt: C. perfringens's GTAT6mAC methylation motif results
-
-   **Figure 12**: MeMoRe results for ONT dataset of C. perfringens's GTAT6mAC methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
