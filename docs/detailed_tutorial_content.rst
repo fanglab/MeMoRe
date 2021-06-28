@@ -5,10 +5,6 @@
 
 We recommend users to first consult the :ref:`Tool showcase <tool-showcase-page>` before this detailed tutorial. To demonstrate the toolbox applications and facilitate an understanding of the methods, we build-in example datasets for SMRT and ONT analyses in `MeMoRe app <https://fanglab-tools.shinyapps.io/MeMoRe/>`_.
 
-* `Analysis of SMRT results`_
-* `Analysis of ONT results`_
-
-
 .. _Principle:
 
 Analytical principle
@@ -71,7 +67,7 @@ Motif is incomplete
 
 In this example, the putative motif reported by the analytical pipeline is TTT6mACNNNNNGTG. We run MeMoRe on the dataset, and the visualization shows high IPD ratio for TTTACNNNNNGTG, and TTTATNNNNNGTG, while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 4). This indicate that the putative motif is incomplete and that the actual methylation motif is TTT6mAYNNNNNGTG (Y = C or T).
 
-.. figure:: figures/TTTACNNNNNGTG_combined.png
+.. figure:: figures/TTTACNNNNNGTG_4_combined.png
    :width: 800
    :align: center
    :alt: C. perfringens's TTT6mACNNNNNGTG methylation motif results
@@ -80,12 +76,14 @@ In this example, the putative motif reported by the analytical pipeline is TTT6m
 
 We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 5 below).
 
-.. figure:: figures/TTTAYNNNNNGTG_combined.png
+.. figure:: figures/TTTAYNNNNNGTG_4_combined.png
    :width: 800
    :align: center
    :alt: C. perfringens's TTT6mAYNNNNNGTG methylation motif results
 
    **Figure 5**: MeMoRe results for SMRT dataset of C. perfringens's TTT6mAYNNNNNGTG methylation motif.
+
+.. _ONT_analysis:
 
 Analysis of ONT results
 =======================
@@ -166,7 +164,7 @@ In this example, the motif reported by the analytical pipeline is GAT5mC. We run
    :align: center
    :alt: C. perfringens's GAT5mC methylation motif results
 
-   **Figure 11**: MeMoRe results for ONT dataset of C. perfringens's GAT5mC methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
+   **Figure 11**: MeMoRe results for ONT dataset of C. perfringens's GAT5mC methylation motif.
 
 This can be visualy confirmed by generating the refine plot for HGATCD (H = A, C, or T; D = A, G, or T) which explicitly exclude overlaps with GGW5mCC.
 
@@ -175,4 +173,4 @@ This can be visualy confirmed by generating the refine plot for HGATCD (H = A, C
    :align: center
    :alt: C. perfringens's HGAT5mCD methylation motif results
 
-   **Figure 12**: MeMoRe results for ONT dataset of C. perfringens's HGAT5mCD methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
+   **Figure 12**: MeMoRe results for ONT dataset of C. perfringens's HGAT5mCD methylation motif.

@@ -22,7 +22,7 @@ The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylatio
    :align: center
    :alt: C. perfringens's GTAT6mAC methylation motif results
 
-   **Figure 1**: MeMoRe results for SMRT dataset of C. perfringens's GTAT6mAC methylation motif. Three metrics are visualized: 1. IPD ratio distribution, 2. Score distribution, 3. Coverage distribution.
+   **Figure 1**: MeMoRe results for SMRT dataset of C. perfringens's GTAT6mAC methylation motif. Three metrics are visualized: top. IPD ratio distribution, middle. Score distribution, bottom. Coverage distribution.
 
 Analysis of ONT results
 ------------------------
@@ -36,9 +36,9 @@ The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylatio
    :align: center
    :alt: C. perfringens's GTAT6mAC methylation motif results
 
-   **Figure 2**: MeMoRe results for ONT dataset of C. perfringens's GTAT6mAC methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
+   **Figure 2**: MeMoRe results for ONT dataset of C. perfringens's GTAT6mAC methylation motif. Two metrics are visualized: top. Current differences distribution, bottom. Methylation motif score
 
 Detailed tutorial
 -----------------
 
-To help you start analyzing your own data, we prepared comprehensive tutorial covering each ``nanodisco`` features using the two build-in datasets. Those examples can be found :doc:`here <detailed_tutorial>`.
+To help you start analyzing your own data, we prepared comprehensive tutorial covering each ``MeMoRe`` features using the two build-in datasets. Those examples can be found :doc:`here <detailed_tutorial>`.
