@@ -57,8 +57,8 @@ The following figures showcase typical situations that can be resolved with `MeM
 * CACNNNNNRTAAA
 * WGGCCW
 
-Motif too general
------------------
+Motif is too general
+--------------------
 
 In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbence for GAC6mAT (i.e. dense current difference distribution at bacjgournd level, around zero), while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
@@ -87,8 +87,8 @@ This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). T
 
    **Figure 8**: MeMoRe results for ONT dataset of C. perfringens's VGAC6mAT methylation motif.
 
-Incomplete motif
-----------------
+Motif is incomplete
+-------------------
 
 In this example, the putative motif reported by the analytical pipeline is GGT5mCC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GGTCC, GGACC, and GATCC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 9). GATCC is fully overlapping with GATC and therefore is not new (see :ref:`ONT overlap`). This indicate that the putative motif is incomplete and that the actual methylation motif is GGW5mCC (W = A or T).
 
@@ -121,3 +121,12 @@ In this example, the motif reported by the analytical pipeline is GAT5mC. We run
    :alt: C. perfringens's GAT5mC methylation motif results
 
    **Figure 11**: MeMoRe results for ONT dataset of C. perfringens's GAT5mC methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
+
+This can be visualy confirmed by generating the refine plot for HGATCD (H = A, C, or T; D = A, G, or T) which explicitly exclude overlaps with GGW5mCC.
+
+.. figure:: figures/HGATCD_5_ont.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's HGAT5mCD methylation motif results
+
+   **Figure 12**: MeMoRe results for ONT dataset of C. perfringens's HGAT5mCD methylation motif. Two metrics are visualized: 1. Current differences distribution, 2. Methylation motif score
