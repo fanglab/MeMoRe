@@ -46,66 +46,69 @@ Analysis of ONT results
 
 In ONT sequencing, DNA methylation affect the electric current measured while the DNA molecules transfers through the nanopores. Using `nanodisco <https://github.com/fanglab/nanodisco>`_, current differences between the native and the Whole Genome Amplified samples are computed at each genomic position and this metric represent the methylation signal for ONT dataset. The further from 0 the current difference are, the more likely the genomic is modified. Contrary to SMRT sequencing, the signal is broadly distributed and not restricted to the modified base, meaning that signal for multiple genomic positions needs to be monitored.
 
-The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is incomplete, *de novo* discovered motif is too general, and partially overlapping *de novo* discovered motifs. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
-* GATC
-* GACAT (has error)
-* GGTCC (has error)
+The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is too general, *de novo* discovered motif is incomplete, and partially overlapping *de novo* discovered motifs. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
+
+*  GACAT (has error)
+*  GGTCC (has error)
+*  GATC
 * TTTAYNNNNNGTG
 * CCGG
 * GTATAC
 * CACNNNNNRTAAA
 * WGGCCW
 
-Incomplete motif
-----------------
-
-In this example, the putative motif reported by the analytical pipeline is GGT5mCC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GGTCC, GGACC, and GATCC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). GATCC is fully overlapping with GATC and therefore is not new. This indicate that the putative motif is incomplete and that the actual methylation motif is GGW5mCC (W = A or T).
-
-.. figure:: figures/GGTCC_4_ont.png
-   :width: 800
-   :align: center
-   :alt: C. perfringens's GGT5mCC methylation motif results
-
-   **Figure 6**: MeMoRe results for ONT dataset of C. perfringens's GGT5mCC methylation motif.
-
-We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 7 below).
-
-.. figure:: figures/GGWCC_4_ont.png
-   :width: 800
-   :align: center
-   :alt: C. perfringens's GGW5mCC methylation motif results
-
-   **Figure 7**: MeMoRe results for ONT dataset of C. perfringens's GGW5mCC methylation motif.
-
 Motif too general
 -----------------
 
-In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbence for GAC6mAT, while the other related motifs (with one substitution) have current difference at background levels (see Figure 8). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
+In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbence for GAC6mAT (i.e. dense current difference distribution at bacjgournd level, around zero), while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
 .. figure:: figures/GACAT_4_ont.png
    :width: 800
    :align: center
    :alt: C. perfringens's GAC6mAT methylation motif results
 
-   **Figure 8**: MeMoRe results for ONT dataset of C. perfringens's GAC6mAT methylation motif.
+   **Figure 6**: MeMoRe results for ONT dataset of C. perfringens's GAC6mAT methylation motif.
 
-To refine the motif of interest, we can use the "Motif summary" panel to extend the motif's evaluation space by adding "NN" as prefix and suffix so that many more motif compositions are considered (e.g. **A**GACAT, **T**GACAT, GACAT**C**, etc.). The resulting analysis is displayed in Figure 9 below.
+To refine the motif of interest, we can use the "Motif summary" panel to extend the motif evaluation space by adding "NN" as prefix and suffix so that many more motif compositions are considered (e.g. **A**GACAT, **T**NGACAT, GACATN**C**, etc.). The resulting analysis is displayed in Figure 7 below.
 
 .. figure:: figures/NNGACATNN_6_ont.png
    :width: 800
    :align: center
    :alt: C. perfringens's NNGAC6mATNN methylation motif results
 
-   **Figure 9**: MeMoRe results for ONT dataset of C. perfringens's NNGAC6mATNN methylation motif.
+   **Figure 7**: MeMoRe results for ONT dataset of C. perfringens's NNGAC6mATNN methylation motif.
 
-This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). The resulting motif can be added to the "Motif summary" panel and the associated plot can be generated (see Figure 10 below).
+This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). The resulting motif can be added to the "Motif summary" panel and the associated plot can be generated (see Figure 8 below). The figure also shows weak signal for VGACCT which is explained by partial overlap with GGWCC (i.e. GGACCt, see :ref:`ONT overlap`).
 
 .. figure:: figures/VGACAT_5_ont.png
    :width: 800
    :align: center
    :alt: C. perfringens's VGAC6mAT methylation motif results
 
-   **Figure 10**: MeMoRe results for ONT dataset of C. perfringens's VGAC6mAT methylation motif.
+   **Figure 8**: MeMoRe results for ONT dataset of C. perfringens's VGAC6mAT methylation motif.
+
+Incomplete motif
+----------------
+
+In this example, the putative motif reported by the analytical pipeline is GGT5mCC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GGTCC, GGACC, and GATCC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 9). GATCC is fully overlapping with GATC and therefore is not new (see :ref:`ONT overlap`). This indicate that the putative motif is incomplete and that the actual methylation motif is GGW5mCC (W = A or T).
+
+.. figure:: figures/GGTCC_4_ont.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's GGT5mCC methylation motif results
+
+   **Figure 9**: MeMoRe results for ONT dataset of C. perfringens's GGT5mCC methylation motif.
+
+We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two addionnals related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see :ref:`ONT overlap`).
+
+.. figure:: figures/GGWCC_4_ont.png
+   :width: 800
+   :align: center
+   :alt: C. perfringens's GGW5mCC methylation motif results
+
+   **Figure 10**: MeMoRe results for ONT dataset of C. perfringens's GGW5mCC methylation motif.
+
+.. _ONT overlap:
 
 Overlapping motifs
 ------------------
