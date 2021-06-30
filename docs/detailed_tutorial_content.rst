@@ -13,6 +13,7 @@ Analytical principle
 In Bacteria and Archaea, DNA methylation events (6mA, 4mC, 5mC) are motif-driven, meaning that nearly all occurrences of the same sequence motif(s) will be modified. This property can be used to refine the motifs discovered from `SMRTPortal/SMRTLink Base Modification Analysis <https://www.pacb.com/support/software-downloads/>`_ or `nanodisco <https://github.com/fanglab/nanodisco>`_ pipelines.
 
 For each methylation motif *de novo* discovered, we identify all occurrences in the provided reference genome, and we aggregate the methylation signal to provide a simple visual representation for motif sequence validation. The same procedure is repeated for all related motifs with one substitution to confirmed that the methylation is precisely represented by a the motif of interest. For example, considering GATC *de novo* discovered, we also extract the methylation signal for:
+
 * 1\ :sup:`st` base substitution: AATC, CATC, TATC.
 * 2\ :sup:`nd` base substitution: GCTC, GGTC, GTTC.
 * 3\ :sup:`rd` base substitution: GAAC, GACC, GAGC.
