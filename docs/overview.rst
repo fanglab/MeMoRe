@@ -12,7 +12,7 @@ We are actively developing ``MeMoRe`` to facilitate usage and broaden features. 
 Usage
 =====
 
-To run ``MeMoRe`` on your own dataset or use our testing dataset please follow: https://fanglab-tools.shinyapps.io/MeMoRe/. ``MeMoRe`` is designed to be user friendly and therefore is distributed as a `Shiny <https://shiny.rstudio.com/>`_ application through `shinyapps.io <https://www.shinyapps.io/>`_ hosting solution.
+To run ``MeMoRe`` on your own dataset or use our testing dataset please follow: https://fanglab-tools.shinyapps.io/MeMoRe/. ``MeMoRe`` is designed to be user friendly and therefore is distributed as a `Shiny <https://shiny.rstudio.com/>`_ application through `shinyapps.io <https://www.shinyapps.io/>`_ hosting solution, no installation needed.
 
 .. include:: tool_showcase.inc
 

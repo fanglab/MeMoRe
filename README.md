@@ -15,7 +15,7 @@ We are actively developing `MeMoRe` to facilitate usage and broaden features. Al
 + [Citation](#Citation)
 
 ## Usage
-To run `MeMoRe` on your own dataset or use our testing dataset please follow: https://fanglab-tools.shinyapps.io/MeMoRe/. `MeMoRe` is designed to be user friendly and therefore is distributed as a [Shiny] application through [shinyapps.io] hosting solution.
+To run `MeMoRe` on your own dataset or use our testing dataset please follow: https://fanglab-tools.shinyapps.io/MeMoRe/. `MeMoRe` is designed to be user friendly and therefore is distributed as a [Shiny] application through [shinyapps.io] hosting solution, no installation needed.
 
 ## Tool showcase
 To showcase the toolbox applications and facilitate an understanding of the methods, we build-in example datasets for SMRT and ONT analyses in [MeMoRe app](https://fanglab-tools.shinyapps.io/MeMoRe/). Typical analysis results for both SMRT and ONT datasets are presented below.
