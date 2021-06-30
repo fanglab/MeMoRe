@@ -10,18 +10,23 @@ We recommend users to first consult the :ref:`Tool showcase <tool-showcase-page>
 Analytical principle
 ====================
 
-In prokaryote and archaea, DNA modification are motif-driven, meaning that nearly all occurrences of the same sequence motif(s) will be modified. This property can be used to refine the motifs discovered from `SMRT Portal/Link Base Modification Analysis <https://www.pacb.com/support/software-downloads/>`_ or `nanodisco <https://github.com/fanglab/nanodisco>`_ pipelines.
+In Bacteria and Archaea, DNA methylation events (6mA, 4mC, 5mC) are motif-driven, meaning that nearly all occurrences of the same sequence motif(s) will be modified. This property can be used to refine the motifs discovered from `SMRTPortal/SMRTLink Base Modification Analysis <https://www.pacb.com/support/software-downloads/>`_ or `nanodisco <https://github.com/fanglab/nanodisco>`_ pipelines.
 
-For each methylation motif *de novo* discovered, we identify all occurrences in the provided reference genome, and we aggregate the methylation signal to provide a simple visual representation for motif sequence validation. The same procedure is repeated for all related motifs with one substitution to confirmed that the methylation is unique to the motif of interest. For example, considering GATC *de novo* discovered, we also extract the methylation signal for AATC, CATC, TATC, GCTC, GGTC, GTTC, GAAC, GACC, GAGC, GATA, GATG, GATT.
+For each methylation motif *de novo* discovered, we identify all occurrences in the provided reference genome, and we aggregate the methylation signal to provide a simple visual representation for motif sequence validation. The same procedure is repeated for all related motifs with one substitution to confirmed that the methylation is precisely represented by a the motif of interest. For example, considering GATC *de novo* discovered, we also extract the methylation signal for:
+
+* Substitution 1\ :sup:`st` base of the motif: AATC, CATC, TATC.
+* Substitution 2\ :sup:`nd` base of the motif: GCTC, GGTC, GTTC.
+* Substitution 3\ :sup:`rd` base of the motif: GAAC, GACC, GAGC.
+* Substitution 4\ :sup:`th` base of the motif: GATA, GATG, GATT.
 
 .. _SMRT_analysis:
 
 Analysis of SMRT results
 ========================
 
-In SMRT sequencing, DNA methylation affect the kinetics of the polymerases used for the sythesis of the SMRTBell templates. The changes of polymerase's kinetics are observed through the Inter-Pulse Duration (IPD) metric which are compared to prediction from an *in silico* model at each genomic position. The resulting metric is called the IPD ratio (IPD native/IPD *in silico*). For 6mA and 4mC DNA modification, the IPD ratio increase on top of the methylated positions while an IPD ratio of 1 means no kinetic change. However, 5mC do not typically produce detectable signal and cannot be reliably found from SMRT data.
+In SMRT sequencing, DNA methylation affect the kinetics of the polymerases used for the synthesis of the SMRTBell templates. The changes of polymerase's kinetics are observed through the Inter-Pulse Duration (IPD) metric which are compared to prediction from an *in silico* model at each genomic position. The resulting metric is called the IPD ratio (IPD native/IPD *in silico*). For 6mA and 4mC DNA modification, the IPD ratio increase on top of the methylated positions while an IPD ratio of 1 means no kinetic change. However, 5mC do not typically produce detectable signal and cannot be reliably found from SMRT data.
 
-The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is incomplete, and *de novo* discovered motif is too general. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
+The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is **"too general" (e.g. CCNGG instead of CCWGG)**, and *de novo* discovered motif is **"incomplete" (e.g. CCAGG instead of CCWGG)**. They were generated from an illustrative *de novo* methylation motif analysis resulting in the following set of motifs:
 
 * TTT6mACNNNNNGTG (has error)
 * GAC6mAT (has error)
@@ -32,8 +37,8 @@ The following figures showcase typical situations that can be resolved with `MeM
 * GAT5mC (not detectable with SMRT data)
 * 5mCCGG (not detectable with SMRT data)
 
-Motif is too general
---------------------
+A motif is too general
+----------------------
 
 In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** high IPD ratio for GAC6mAT (i.e. dense IPD ratio distribution at background level, around one), while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 1). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
@@ -62,10 +67,10 @@ This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). T
 
    **Figure 3**: MeMoRe results for SMRT dataset of C. perfringens's VGAC6mAT methylation motif.
 
-Motif is incomplete
--------------------
+A motif is incomplete
+---------------------
 
-In this example, the putative motif reported by the analytical pipeline is TTT6mACNNNNNGTG. We run MeMoRe on the dataset, and the visualization shows high IPD ratio for TTTACNNNNNGTG, and TTTATNNNNNGTG, while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 4). This indicate that the putative motif is incomplete and that the actual methylation motif is TTT6mAYNNNNNGTG (Y = C or T).
+In this example, the putative motif reported by the analytical pipeline is TTT6mACNNNNNGTG. We run MeMoRe on the dataset, and the visualization shows high IPD ratio for TTTA**C**NNNNNGTG, and TTTA**T**NNNNNGTG, while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 4). This indicate that the putative motif is incomplete and that the actual methylation motif is TTT6mA**Y**NNNNNGTG (Y = C or T).
 
 .. figure:: figures/TTTACNNNNNGTG_4_combined.png
    :width: 800
@@ -90,7 +95,7 @@ Analysis of ONT results
 
 In ONT sequencing, DNA methylation affect the electric current measured while the DNA molecules transfers through the nanopores. Using `nanodisco <https://github.com/fanglab/nanodisco>`_, current differences between the native and the Whole Genome Amplified samples are computed at each genomic position and this metric represent the methylation signal for ONT dataset. The further from 0 the current difference are, the more likely the genomic is modified. Contrary to SMRT sequencing, the signal is broadly distributed and not restricted to the modified base, meaning that signal for multiple genomic positions needs to be monitored.
 
-The following figures showcase typical situations that can be resolved with `MeMoRe` analysis: *de novo* discovered motif is too general, *de novo* discovered motif is incomplete, and partially overlapping *de novo* discovered motifs. They were generated from an hypothetical *de novo* methylation motif analysis resulting in the following set of motifs:
+The following figures showcase typical situations that can be resolved with `MeMoRe` analysis:  *de novo* discovered motif is **"too general" (e.g. CCNGG instead of CCWGG)**, *de novo* discovered motif is **"incomplete" (e.g. CCAGG instead of CCWGG)**, and *de novo* discovered motifs **partially overlapping (e.g. 5mCCGG and 5mCCWGG)**. They were generated from an illustrative *de novo* methylation motif analysis resulting in the following set of motifs:
 
 * GAC6mAT (has error)
 * GGT5mCC (has error)
@@ -101,10 +106,10 @@ The following figures showcase typical situations that can be resolved with `MeM
 * C6mACNNNNNRTAAA
 * WGG4mCCW
 
-Motif is too general
---------------------
+A motif is too general
+----------------------
 
-In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbence for GAC6mAT (i.e. dense current difference distribution at background level, around zero), while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
+In this example, the putative motif reported by the analytical pipeline is GAC6mAT. We run MeMoRe on the dataset, and the visualization only shows **partial** current differences disturbance for GAC6mAT (i.e. dense current difference distribution at background level, around zero), while the other related motifs (with one substitution) have current difference at background levels (see Figure 6). This indicate that the putative motif is too general and that the actual methylation motif must be more precise.
 
 .. figure:: figures/GACAT_4_ont.png
    :width: 800
@@ -131,8 +136,8 @@ This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). T
 
    **Figure 8**: MeMoRe results for ONT dataset of C. perfringens's VGAC6mAT methylation motif.
 
-Motif is incomplete
--------------------
+A motif is incomplete
+---------------------
 
 In this example, the putative motif reported by the analytical pipeline is GGT5mCC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GGTCC, GGACC, and GATCC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 9). GATCC is fully overlapping with GATC and therefore is not new (see `Overlapping motifs`_). This indicate that the putative motif is incomplete and that the actual methylation motif is GGW5mCC (W = A or T).
 
@@ -143,7 +148,7 @@ In this example, the putative motif reported by the analytical pipeline is GGT5m
 
    **Figure 9**: MeMoRe results for ONT dataset of C. perfringens's GGT5mCC methylation motif.
 
-We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two addionnals related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see `Overlapping motifs`_).
+We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two additionnals related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see `Overlapping motifs`_).
 
 .. figure:: figures/GGWCC_4_ont.png
    :width: 800
@@ -157,7 +162,7 @@ We can use the "Motif summary" panel to add the complete motif and generate the 
 Overlapping motifs
 ------------------
 
-In this example, the motif reported by the analytical pipeline is GAT5mC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GATC but also GGTC and GACC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 11). GGTC and GACC are partially overlapping with GGWCC and therefore are not new. This indicate that all the additional methylation signal can be explained by GGW5mCC, therefore GATC and GGWCC explains all the signal visualized.
+In this example, the motif reported by the analytical pipeline is GAT5mC. We run MeMoRe on the dataset, and the visualization shows disturbed current differences for GATC as well as for GGTC and GACC, while the other related motifs (with one substitution) have current difference at background levels (see Figure 11). GGTC and GACC are partially overlapping with GGWCC and therefore should not be considered as new independent motifs. This indicate that all the additional methylation signal can be explained by GGW5mCC, therefore GATC and GGWCC explain all the signal visualized.
 
 .. figure:: figures/GATC_4_ont.png
    :width: 800
@@ -166,7 +171,7 @@ In this example, the motif reported by the analytical pipeline is GAT5mC. We run
 
    **Figure 11**: MeMoRe results for ONT dataset of C. perfringens's GAT5mC methylation motif.
 
-This can be visualy confirmed by generating the refine plot for HGATCD (H = A, C, or T; D = A, G, or T) which explicitly exclude overlaps with GGW5mCC.
+This can be visually confirmed by generating the refine plot for HGATCD (H = A, C, or T; D = A, G, or T) which explicitly exclude overlaps with GGW5mCC.
 
 .. figure:: figures/HGATCD_5_ont.png
    :width: 800
