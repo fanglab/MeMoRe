@@ -10,10 +10,10 @@ In Bacteria and Archaea, DNA methylation events (6mA, 4mC, 5mC) are motif-driven
 
 For each methylation motif *de novo* discovered, we identify all occurrences in the provided reference genome, and we aggregate the methylation signal to provide a simple visual representation for motif sequence validation. The same procedure is repeated for all related motifs with one substitution to confirmed that the methylation is precisely represented by a the motif of interest. For example, considering GATC *de novo* discovered, we also extract the methylation signal for:
 
-* Substitution 1\ :sup:`st` base of the motif: AATC, CATC, TATC.
-* Substitution 2\ :sup:`nd` base of the motif: GCTC, GGTC, GTTC.
-* Substitution 3\ :sup:`rd` base of the motif: GAAC, GACC, GAGC.
-* Substitution 4\ :sup:`th` base of the motif: GATA, GATG, GATT.
+* 1\ :sup:`st` base substitution: AATC, CATC, TATC.
+* 2\ :sup:`nd` base substitution: GCTC, GGTC, GTTC.
+* 3\ :sup:`rd` base substitution: GAAC, GACC, GAGC.
+* 4\ :sup:`th` base substitution: GATA, GATG, GATT.
 
 Analysis of SMRT results
 ------------------------
