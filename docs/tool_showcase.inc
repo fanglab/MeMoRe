@@ -1,7 +1,7 @@
 Tool showcase
 =============
 
-To showcase the toolbox applications and facilitate an understanding of the methods, we build-in example datasets for SMRT and ONT analyses in `MeMoRe app <https://fanglab-tools.shinyapps.io/MeMoRe/>`_. Typical analysis results for both SMRT and ONT datasets are presented below.
+To showcase the toolbox applications and facilitate an understanding of the methods, we build in example datasets for SMRT and ONT analyses in `MeMoRe app <https://fanglab-tools.shinyapps.io/MeMoRe/>`_. Typical analysis results for both SMRT and ONT datasets are presented below.
 
 Principle
 ---------
@@ -46,4 +46,4 @@ The following figure showcase a typical `MeMoRe` results for GTAT6mAC methylatio
 Detailed tutorial
 -----------------
 
-To help you start analyzing your own data, we prepared comprehensive tutorial covering each ``MeMoRe`` features using the two build-in datasets. Those examples can be found :doc:`here <detailed_tutorial>`.
+To help you start analyzing your own data, we prepared comprehensive tutorial covering each ``MeMoRe`` features using the two build in datasets. Those examples can be found :doc:`here <detailed_tutorial>`.

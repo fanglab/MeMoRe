@@ -3,7 +3,7 @@
 
 .. _detailed-tutorial-content:
 
-We recommend users to first consult the :ref:`Tool showcase <tool-showcase-page>` before this detailed tutorial. To demonstrate the toolbox applications and facilitate an understanding of the methods, we build-in example datasets for SMRT and ONT analyses in `MeMoRe app <https://fanglab-tools.shinyapps.io/MeMoRe/>`_.
+We recommend users to first consult the :ref:`Tool showcase <tool-showcase-page>` before this detailed tutorial. To demonstrate the toolbox applications and facilitate an understanding of the methods, we build in example datasets for SMRT and ONT analyses in `MeMoRe app <https://fanglab-tools.shinyapps.io/MeMoRe/>`_.
 
 .. _Principle:
 
@@ -148,7 +148,7 @@ In this example, the putative motif reported by the analytical pipeline is GGT5m
 
    **Figure 9**: MeMoRe results for ONT dataset of C. perfringens's GGT5mCC methylation motif.
 
-We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two additionnals related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see `Overlapping motifs`_).
+We can use the "Motif summary" panel to add the complete motif and generate the associated plot (see Figure 10 below). We also observed two additional related motifs with signal as GGWCC overlap with other motifs (i.e. GGWTC and GGWCA which respectively correspond to GATC and GACAT, see `Overlapping motifs`_).
 
 .. figure:: figures/GGWCC_4_ont.png
    :width: 800
