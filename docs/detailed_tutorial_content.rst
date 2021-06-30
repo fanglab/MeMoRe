@@ -13,11 +13,10 @@ Analytical principle
 In Bacteria and Archaea, DNA methylation events (6mA, 4mC, 5mC) are motif-driven, meaning that nearly all occurrences of the same sequence motif(s) will be modified. This property can be used to refine the motifs discovered from `SMRTPortal/SMRTLink Base Modification Analysis <https://www.pacb.com/support/software-downloads/>`_ or `nanodisco <https://github.com/fanglab/nanodisco>`_ pipelines.
 
 For each methylation motif *de novo* discovered, we identify all occurrences in the provided reference genome, and we aggregate the methylation signal to provide a simple visual representation for motif sequence validation. The same procedure is repeated for all related motifs with one substitution to confirmed that the methylation is precisely represented by a the motif of interest. For example, considering GATC *de novo* discovered, we also extract the methylation signal for:
-
-* Substitution 1\ :sup:`st` base of the motif: AATC, CATC, TATC.
-* Substitution 2\ :sup:`nd` base of the motif: GCTC, GGTC, GTTC.
-* Substitution 3\ :sup:`rd` base of the motif: GAAC, GACC, GAGC.
-* Substitution 4\ :sup:`th` base of the motif: GATA, GATG, GATT.
+* 1\ :sup:`st` base substitution: AATC, CATC, TATC.
+* 2\ :sup:`nd` base substitution: GCTC, GGTC, GTTC.
+* 3\ :sup:`rd` base substitution: GAAC, GACC, GAGC.
+* 4\ :sup:`th` base substitution: GATA, GATG, GATT.
 
 .. _SMRT_analysis:
 
@@ -70,7 +69,7 @@ This indicate that the actual methylation motif is VGAC6mAT (V = A , C, or G). T
 A motif is incomplete
 ---------------------
 
-In this example, the putative motif reported by the analytical pipeline is TTT6mACNNNNNGTG. We run MeMoRe on the dataset, and the visualization shows high IPD ratio for TTTA**C**NNNNNGTG, and TTTA**T**NNNNNGTG, while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 4). This indicate that the putative motif is incomplete and that the actual methylation motif is TTT6mA**Y**NNNNNGTG (Y = C or T).
+In this example, the putative motif reported by the analytical pipeline is TTT6mACNNNNNGTG. We run MeMoRe on the dataset, and the visualization shows high IPD ratio for TTTA\ **C**\ NNNNNGTG, and TTTA\ **T**\ NNNNNGTG, while the other related motifs (with one substitution) have IPD ratio at background levels (see Figure 4). This indicate that the putative motif is incomplete and that the actual methylation motif is TTT6mA\ **Y**\ NNNNNGTG (Y = C or T).
 
 .. figure:: figures/TTTACNNNNNGTG_4_combined.png
    :width: 800
