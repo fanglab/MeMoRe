@@ -41,46 +41,54 @@ function(input, output, session) {
   
   # If testing with SMRT data
   observeEvent(input$smrt_test, {
-    testing_mode <<- TRUE # Override input checking
-    initial$datapath <- NULL
+    if(!file.exists("iam_a_container")){
+      testing_mode <<- TRUE # Override input checking
+      initial$datapath <- NULL
 
-    # Reset motif summary table
-    initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
+      # Reset motif summary table
+      initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
 
-    v$modFile <- "data/modification.smrt.csv.gz"
-    v$genFile <- "data/reference.fasta"
-    v$motFile <- "data/motif_summary.tsv"
+      v$modFile <- "data/modification.smrt.csv.gz"
+      v$genFile <- "data/reference.fasta"
+      v$motFile <- "data/motif_summary.tsv"
 
-    initial$datapath <- v$motFile
+      initial$datapath <- v$motFile
 
-    load_testing_data <<- load_testing_data + 1 # Keep track of actionButton status
-    # load_testing_data <<- 1 # Keep track of actionButton status
+      load_testing_data <<- load_testing_data + 1 # Keep track of actionButton status
+      # load_testing_data <<- 1 # Keep track of actionButton status
 
-    # Hide inputs
-    updateActionButton(session, "input_toggle", label="Show")
-    shinyjs::hide(id="input_subpanel")
+      # Hide inputs
+      updateActionButton(session, "input_toggle", label="Show")
+      shinyjs::hide(id="input_subpanel")
+    }else{
+      showNotification("Testing datasets are not available for local execution, please use the shiny application.", type="warning")
+    }
   })
   
-  # If testing with SMRT data
+  # If testing with ONT data
   observeEvent(input$ont_test, {
-    testing_mode <<- TRUE # Override input checking
-    initial$datapath <- NULL
+    if(!file.exists("iam_a_container")){
+      testing_mode <<- TRUE # Override input checking
+      initial$datapath <- NULL
 
-    # Reset motif summary table
-    initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
+      # Reset motif summary table
+      initialize.motif.summary(v, list_motif_summary_clean_SMRT_cols)
 
-    v$modFile <- "data/modification.ont.rds"
-    v$genFile <- "data/reference.fasta"
-    v$motFile <- "data/motif_summary.tsv"
-    
-    initial$datapath <- v$motFile
+      v$modFile <- "data/modification.ont.rds"
+      v$genFile <- "data/reference.fasta"
+      v$motFile <- "data/motif_summary.tsv"
+      
+      initial$datapath <- v$motFile
 
-    load_testing_data <<- load_testing_data + 1 # Keep track of actionButton status
-    # load_testing_data <<- 1 # Keep track of actionButton status
+      load_testing_data <<- load_testing_data + 1 # Keep track of actionButton status
+      # load_testing_data <<- 1 # Keep track of actionButton status
 
-    # Hide inputs
-    updateActionButton(session, "input_toggle", label="Show")
-    shinyjs::hide(id="input_subpanel")
+      # Hide inputs
+      updateActionButton(session, "input_toggle", label="Show")
+      shinyjs::hide(id="input_subpanel")
+    }else{
+      showNotification("Testing datasets are not available for local execution, please use the shiny application.", type="warning")
+    }
   })
 
   # Initialize automated input processes

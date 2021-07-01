@@ -26,8 +26,9 @@ RUN apt-get update && \
 #COPY /app ./app
 RUN git clone https://github.com/touala/SMRT-debugMotifs.git
 
-# Define WORKDIR
+# Define WORKDIR and flag as Docker container
 WORKDIR /SMRT-debugMotifs
+RUN touch iam_a_container
 
 # Install renv & restore packages
 RUN Rscript -e 'install.packages("renv")'
