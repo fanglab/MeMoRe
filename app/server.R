@@ -41,7 +41,7 @@ function(input, output, session) {
   
   # If testing with SMRT data
   observeEvent(input$smrt_test, {
-    if(!file.exists("iam_a_container")){
+    if(!file.exists("../iam_a_container")){
       testing_mode <<- TRUE # Override input checking
       initial$datapath <- NULL
 
@@ -61,13 +61,13 @@ function(input, output, session) {
       updateActionButton(session, "input_toggle", label="Show")
       shinyjs::hide(id="input_subpanel")
     }else{
-      showNotification("Testing datasets are not available for local execution, please use the shiny application.", type="warning")
+      showNotification("Testing datasets are not available for local execution, please use the shiny web application.", type="warning")
     }
   })
   
   # If testing with ONT data
   observeEvent(input$ont_test, {
-    if(!file.exists("iam_a_container")){
+    if(!file.exists("../iam_a_container")){
       testing_mode <<- TRUE # Override input checking
       initial$datapath <- NULL
 
@@ -87,7 +87,7 @@ function(input, output, session) {
       updateActionButton(session, "input_toggle", label="Show")
       shinyjs::hide(id="input_subpanel")
     }else{
-      showNotification("Testing datasets are not available for local execution, please use the shiny application.", type="warning")
+      showNotification("Testing datasets are not available for local execution, please use the shiny web application.", type="warning")
     }
   })
 
