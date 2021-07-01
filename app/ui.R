@@ -19,15 +19,15 @@ shinyUI(fluidPage(
         "ul[class^='nav'] [data-value$='_SMRT'] { background-color: #FFF; color: #D21F3B; border-color: #F8F8F8; border-bottom-color: #DDDDDD; padding:4px; font-size:90%;}",
         "ul[class^='nav'] [data-value$='_ONT'] { background-color: #FFF; color: #005D75; border-color: #F8F8F8; border-bottom-color: #DDDDDD; padding:4px; font-size:90%;}"
       ),
-      tags$link(rel="shortcut icon", href="https://raw.githubusercontent.com/touala/SMRT-debugMotifs/master/docs/_static/MeMoRe.favicon_96.png?raw=true")
+      tags$link(rel="shortcut icon", href="https://raw.githubusercontent.com/fanglab/MeMoRe/master/docs/_static/MeMoRe.favicon_96.png?raw=true")
     ),
 
     div(
       # titlePanel("MeMoRe"),
-      HTML('<img src="https://raw.githubusercontent.com/touala/SMRT-debugMotifs/master/docs/_static/MeMoRe.logo.png?raw=true" alt="MeMoRe.logo" height="50" width="149"/>'),
+      HTML('<img src="https://raw.githubusercontent.com/fanglab/MeMoRe/master/docs/_static/MeMoRe.logo.png?raw=true" alt="MeMoRe.logo" height="50" width="149"/>'),
       HTML('&nbsp;'),
       uiOutput("app_version"),
-      shiny::actionButton('helpb', label="", icon=icon("info"), onclick="window.open('https://smrt-debugmotifs.readthedocs.io/en/latest/overview.html', '_blank')", style='font-size:80%; position:absolute; top:15px; right:15px;'),
+      shiny::actionButton('helpb', label="", icon=icon("info"), onclick="window.open('https://memore.readthedocs.io/en/latest/overview.html', '_blank')", style='font-size:80%; position:absolute; top:15px; right:15px;'),
       style='padding-bottom:2px'
     ),
 
