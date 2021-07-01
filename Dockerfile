@@ -19,15 +19,11 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get clean
 
-# copy necessary files
-## renv.lock file
-#COPY /renv.lock ./renv.lock
-## app folder
-#COPY /app ./app
-RUN git clone https://github.com/touala/SMRT-debugMotifs.git
+# Retrieve repository
+RUN git clone https://github.com/fanglab/MeMoRe.git
 
 # Define WORKDIR and flag as Docker container
-WORKDIR /SMRT-debugMotifs
+WORKDIR /MeMoRe
 RUN touch iam_a_container
 
 # Install renv & restore packages
