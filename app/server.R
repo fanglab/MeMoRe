@@ -1,5 +1,5 @@
 # Run locally: shiny::runApp('./app', host='0.0.0.0', port=3838)
-# Deploy: library(rsconnect); rsconnect::deployApp(appName="SMRTdebug", appDir='app/')
+# Deploy: library(rsconnect); rsconnect::deployApp(appName="MeMoRe", appDir='app/')
 # Track ressources: ~/Library/Python/2.7/bin/psrecord $(pgrep -x R) --include-children --interval 0.1  --plot plot.png
 
 app_version <<- "0.1.0_dev"
@@ -433,7 +433,7 @@ function(input, output, session) {
   )
 
   output$app_version <- renderUI({
-    tags$a(href="https://github.com/touala/SMRT-debugMotifs", app_version, style="color:#333")
+    tags$a(href="https://github.com/fanglab/MeMoRe", app_version, style="color:#333")
   })
 
   session$onSessionEnded(function(){
