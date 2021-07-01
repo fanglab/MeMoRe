@@ -1,4 +1,4 @@
-# memore
+# MeMoRe
 
 `MeMoRe` stand for Methylation Motif Refiner. This is a tool designed to validate and, if necessary, refine methylation motifs detected from Bacteria and Archaea with SMRT and ONT sequencing.
 
